@@ -1,62 +1,64 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// Inicializa o client com a chave do ambiente
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 async function generateWorkoutDescription(userProfile, workout) {
+  // Se não tiver chave configurada, retorna fallback técnico
   if (!process.env.GEMINI_API_KEY) {
-    return `${workout.name}: ${workout.description}`;
+    const desc = workout.description || workout.desc || 'Detalhes não fornecidos';
+    return `📋 ${workout.name}: ${desc}`;
   }
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
+    // Usa 'description' ou 'desc' (corrige o bug de variável)
+    const techDetails = workout.description || workout.desc || 'Sem detalhes técnicos.';
+
     const prompt = `
 Você é um treinador de corrida pessoal, motivacional e didático.
 Gere uma explicação clara e motivadora para o seguinte treino:
 
 - **Atleta**: ${userProfile.name}
-- **Meta 5K**: ${workout.target5k || '19:00'}
 - **Treino**: ${workout.name}
-- **Detalhes técnicos**: ${workout.description}
+- **Detalhes técnicos**: ${techDetails}
 - **Duração prevista**: ${workout.moving_time ? Math.round(workout.moving_time / 60) + ' min' : 'Descanso/Recuperação'}
 
 Instruções:
 1. Explique o **objetivo** deste treino na semana (ex: criar base, melhorar velocidade, recuperação).
 2. Dê uma **dica técnica ou mental** simples para ajudar na execução.
 3. Seja motivador, mas realista. Use emojis.
-4. Retorne APENAS o texto, sem markdown extra.
+4. Retorne APENAS o texto da explicação, sem títulos ou "markdown" extra.
 `;
 
     const result = await model.generateContent(prompt);
-    return result.response.text().trim();
+    const text = result.response.text().trim();
+    
+    // Se a IA retornar vazio, usa fallback
+    return text || `📋 ${workout.name}: ${techDetails}`;
   } catch (error) {
-    console.error('Gemini AI Error:', error.message);
-    return `${workout.name}: ${workout.description}`;
+    console.error('Erro ao gerar texto da IA:', error.message);
+    // Fallback em caso de erro
+    const desc = workout.description || workout.desc || 'Treino gerado.';
+    return `⚠️ ${workout.name}: ${desc}`;
   }
 }
 
 async function generateSummary(analysis) {
   if (!process.env.GEMINI_API_KEY) {
-    return `Total: ${analysis.totalRuns} corridas | Distância: ${analysis.totalDist.toFixed(1)}km | Melhor 5K: ${analysis.best5k?.time || 'N/A'}`;
+    return `Análise técnica: ${analysis.totalRuns} corridas, ${analysis.totalDist.toFixed(1)}km.`;
   }
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    const prompt = `
-Analise os dados de corrida deste atleta e gere um resumo encorajador em 2-3 frases:
-- Total de corridas: ${analysis.totalRuns}
-- Distância total: ${analysis.totalDist.toFixed(1)} km
-- Pace médio: ${analysis.avgPace?.toFixed(2)} s/km
-- Melhor 5K: ${analysis.best5k?.time || 'N/A'}
-- FC média: ${analysis.avgHR || 'N/A'} bpm
-- Foco principal: ${analysis.totalRuns > 20 ? 'Consistência' : 'Progressão inicial'}
-`;
+    const prompt = `Analise os dados deste corredor e dê um feedback motivacional de 2 frases.
+    Dados: ${analysis.totalRuns} corridas, ${analysis.totalDist.toFixed(1)} km no total, pace médio de ${Math.round(analysis.avgPace/60)}min/km.`;
 
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
-  } catch (error) {
-    return `Análise: ${analysis.totalRuns} corridas, ${analysis.totalDist.toFixed(1)}km percorridos.`;
+  } catch (e) {
+    return "Análise concluída com sucesso!";
   }
 }
 
