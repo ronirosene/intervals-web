@@ -208,3 +208,59 @@ async function syncToCalendar(plan, client) {
 }
 
 module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime };
+// ... (mantenha todo o código existente acima) ...
+
+async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
+  const { generateWorkoutDescription } = require('./ai');
+  const plan = [];
+  const today = new Date();
+  let current = new Date(today);
+  current.setDate(today.getDate() + 1); // Começa amanhã
+
+  // Define os dias de treino (0=Dom, 1=Seg, ...)
+  // Lógica: Seg(1), Qua(3), Sex(5) para 3 dias; ajusta para outros casos
+  let runDays = [1, 3, 5]; 
+  if (daysPerWeek === 2) runDays = [1, 4]; // Seg, Qui
+  if (daysPerWeek === 4) runDays = [1, 2, 4, 5]; // Seg, Ter, Qui, Sex
+  if (daysPerWeek === 5) runDays = [1, 2, 3, 4, 5]; // Seg a Sex
+
+  for (let w = 0; w < weeks; w++) {
+    for (let d = 0; d < 7; d++) {
+      const isRunDay = runDays.includes(d);
+      const isRestDay = !isRunDay;
+      
+      let name = `[S${w + 1}] Descanso`;
+      let desc = 'Descanso total ou caminhada leve de 15 min.';
+      let time = 0;
+
+      if (isRunDay) {
+        name = `[S${w + 1}] Caminhada/Trote`;
+        // Progressão simples para iniciantes
+        const duration = 25 + (w * 5); // 25min, 30min, 35min...
+        desc = `Comece com 5min de caminhada. Alterne 1min trote leve / 2min caminhada por ${duration} minutos. Foco na respiração.`;
+        time = duration * 60;
+      }
+
+      // IA gera o texto motivacional
+      const aiDesc = await generateWorkoutDescription(
+        { name: userProfile.name },
+        { name, description: desc, moving_time: time }
+      );
+
+      plan.push({
+        name,
+        date: current.toISOString().split('T')[0],
+        description: aiDesc,
+        type: 'Run',
+        moving_time: time
+      });
+
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  return { plan, zones: {}, best5kPace: 0, target5kPace: 0 };
+}
+
+// Atualize o exports no final do arquivo para incluir a nova função
+module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan };

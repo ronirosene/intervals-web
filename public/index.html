@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intervals Training Hub</title>
   <style>
+    /* (Mantenha o CSS igual ao anterior) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
     .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -12,8 +13,6 @@
     h1 { font-size: 1.5rem; color: #38bdf8; }
     .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; }
     .btn-primary { background: #38bdf8; color: #0f172a; }
-    .btn-primary:hover { background: #7dd3fc; }
-    .btn-danger { background: #ef4444; color: white; }
     .btn-success { background: #22c55e; color: #0f172a; }
     .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
     .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #334155; }
@@ -35,17 +34,15 @@
     .plan-item { padding: 12px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #38bdf8; }
     .plan-item .name { font-weight: 600; }
     .plan-item .desc { font-size: 0.85rem; color: #cbd5e1; margin-top: 6px; line-height: 1.4; }
-    .ai-badge { display: inline-block; background: linear-gradient(45deg, #38bdf8, #818cf8); color: #0f172a; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
-    .summary-box { background: linear-gradient(135deg, #1e293b, #334155); padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #475569; font-style: italic; color: #94a3b8; }
-    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #22c55e; color: #0f172a; border-radius: 8px; font-weight: 600; opacity: 0; transform: translateY(20px); transition: 0.3s; z-index: 1000; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .loading { color: #38bdf8; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .zone-tag { display: inline-block; background: #334155; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 0.8rem; }
+    .ai-badge { background: linear-gradient(45deg, #38bdf8, #818cf8); color: #0f172a; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+    .summary-box { background: #0f172a; padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #475569; color: #94a3b8; font-style: italic; }
+    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #22c55e; color: #0f172a; border-radius: 8px; font-weight: 600; z-index: 1000; transform: translateY(100px); transition: 0.3s; }
+    .toast.show { transform: translateY(0); }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Tela de Login/Registro (Mantida igual) -->
     <div id="auth">
       <header><h1>🏃 Intervals Training Hub</h1></header>
       <div class="card">
@@ -54,82 +51,76 @@
           <div class="tab" onclick="showTab('register')">Registrar</div>
         </div>
         <div id="login-form">
-          <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="login-password" placeholder="••••••••"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="login-email"></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="login-password"></div>
           <button class="btn btn-primary" style="width:100%" onclick="login()">Entrar</button>
         </div>
         <div id="register-form" class="hidden">
-          <div class="form-group"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
-          <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="reg-password" placeholder="••••••••"></div>
-          <div class="form-group"><label>Intervals API Key (opcional)</label><input type="text" id="reg-api-key" placeholder="sua-chave"></div>
-          <div class="form-group"><label>Intervals Athlete ID (opcional)</label><input type="text" id="reg-athlete-id" placeholder="i12345"></div>
+          <div class="form-group"><label>Nome</label><input type="text" id="reg-name"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="reg-email"></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="reg-password"></div>
           <button class="btn btn-primary" style="width:100%" onclick="register()">Criar conta</button>
         </div>
       </div>
     </div>
 
+    <!-- App Principal -->
     <div id="app" class="hidden">
       <header>
         <h1>🏃 Intervals Training Hub</h1>
-        <div style="display:flex; gap:10px; align-items:center">
-          <span id="user-name" style="color:#94a3b8"></span>
+        <div>
+          <span id="user-name" style="color:#94a3b8; margin-right:10px"></span>
           <button class="btn btn-outline" onclick="logout()">Sair</button>
         </div>
       </header>
 
+      <!-- Navegação -->
       <div class="tabs">
         <div class="tab active" onclick="showSection('dashboard')">Dashboard</div>
-        <div class="tab" onclick="showSection('upload')">Upload</div>
-        <div class="tab" onclick="showSection('plans')">Planos</div>
+        <div class="tab" onclick="showSection('zeroplane')">🌱 Iniciante</div>
+        <div class="tab" onclick="showSection('plans')">Meus Planos</div>
         <div class="tab" onclick="showSection('settings')">Configurações</div>
       </div>
 
+      <!-- Dashboard -->
       <div id="dashboard">
         <div class="card">
-          <h2>📊 Resumo da sua Jornada</h2>
-          <div id="ai-summary" class="summary-box hidden"></div>
-          <div class="grid" style="margin-top:16px">
+          <h2>📊 Resumo</h2>
+          <div class="grid">
             <div class="stat"><div class="value" id="stat-runs">-</div><div class="label">Corridas</div></div>
             <div class="stat"><div class="value" id="stat-dist">-</div><div class="label">Distância (km)</div></div>
-            <div class="stat"><div class="value" id="stat-pace">-</div><div class="label">Pace Médio</div></div>
-            <div class="stat"><div class="value" id="stat-5k">-</div><div class="label">Melhor 5K</div></div>
           </div>
         </div>
       </div>
 
-      <div id="upload" class="hidden">
+      <!-- Nova Aba: Iniciante -->
+      <div id="zeroplane" class="hidden">
         <div class="card">
-          <h2>📤 Upload de Atividades</h2>
-          <p style="color:#94a3b8; margin-bottom:16px">Envie seu arquivo .xlsx exportado do Intervals.icu</p>
-          <div class="form-group"><input type="file" id="file-input" accept=".xlsx,.xls" style="padding:20px; text-align:center; border:2px dashed #334155"></div>
-          <button class="btn btn-primary" onclick="uploadFile()">Analisar Dados com IA</button>
-          <div id="upload-result" style="margin-top:16px"></div>
+          <h2>🌱 Começando do Zero</h2>
+          <p style="color:#94a3b8; margin-bottom:16px">Sem arquivo de dados? Sem problema. Nossa IA cria um plano seguro para você começar.</p>
+          <div class="grid">
+            <div class="form-group"><label>Dias por semana</label><input type="number" id="zp-days" value="3" min="2" max="5"></div>
+            <div class="form-group"><label>Duração (semanas)</label><input type="number" id="zp-weeks" value="4" min="2" max="8"></div>
+          </div>
+          <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Meu Plano</button>
+          <div id="zp-result" style="margin-top:16px"></div>
         </div>
       </div>
 
+      <!-- Aba: Meus Planos -->
       <div id="plans" class="hidden">
         <div class="card">
-          <h2>🏗️ Gerar Plano de Treino Personalizado</h2>
-          <div class="grid" style="margin-bottom:16px">
-            <div class="form-group"><label>Semanas</label><input type="number" id="plan-weeks" value="4" min="1" max="12"></div>
-            <div class="form-group"><label>Meta 5K (min)</label><input type="number" id="plan-target" value="19" step="0.5"></div>
-          </div>
-          <button class="btn btn-primary" onclick="generatePlan()">✨ Gerar Plano com IA</button>
-          <div id="plan-result" style="margin-top:16px"></div>
-        </div>
-        <div class="card">
-          <h2>📅 Planos Existentes</h2>
-          <div id="plans-list"></div>
+          <h2>📅 Planos Salvos</h2>
+          <div id="plans-list">Carregando...</div>
         </div>
       </div>
 
+      <!-- Aba: Configurações -->
       <div id="settings" class="hidden">
         <div class="card">
           <h2>⚙️ Configurações</h2>
           <div class="form-group"><label>Intervals API Key</label><input type="text" id="set-api-key"></div>
           <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id"></div>
-          <div class="form-group"><label>Meta 5K (segundos)</label><input type="number" id="set-target-5k" value="1140"></div>
           <button class="btn btn-primary" onclick="saveSettings()">Salvar</button>
         </div>
       </div>
@@ -141,158 +132,110 @@
   <script>
     let token = localStorage.getItem('token');
 
+    // Funções auxiliares
+    function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+    async function api(url, method = 'GET', body = null) {
+      const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
+      if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+      const res = await fetch(`/api${url}`, opts);
+      if (!res.ok) throw new Error((await res.json()).error);
+      return res.json();
+    }
+    
+    // Navegação
     function showTab(tab) {
       document.querySelectorAll('#auth .tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
       document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
     }
-
-    function showSection(section) {
+    function showSection(sec) {
       document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
-      ['dashboard', 'upload', 'plans', 'settings'].forEach(s => {
-        document.getElementById(s).classList.toggle('hidden', s !== section);
-      });
+      ['dashboard','zeroplane','plans','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
     }
 
-    function toast(msg, type = 'success') {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.style.background = type === 'error' ? '#ef4444' : '#22c55e';
-      t.style.color = type === 'error' ? 'white' : '#0f172a';
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    async function api(url, method = 'GET', body = null) {
-      const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
-      if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-      const res = await fetch(`/api${url}`, opts);
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    }
-
+    // Auth
     async function login() {
       try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: document.getElementById('login-email').value, password: document.getElementById('login-password').value })
-        });
-        const data = await res.json();
-        if (!res.ok) return toast(data.error, 'error');
-        token = data.token;
-        localStorage.setItem('token', token);
-        initApp();
-        toast('Login realizado!');
-      } catch (e) { toast(e.message, 'error'); }
+        const data = await api('/auth/login', 'POST', { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
+        token = data.token; localStorage.setItem('token', token); initApp(); toast('Login realizado!');
+      } catch (e) { toast('Erro: ' + e.message); }
     }
-
     async function register() {
       try {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: document.getElementById('reg-name').value,
-            email: document.getElementById('reg-email').value,
-            password: document.getElementById('reg-password').value,
-            intervals_api_key: document.getElementById('reg-api-key').value,
-            intervals_athlete_id: document.getElementById('reg-athlete-id').value,
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) return toast(data.error, 'error');
-        token = data.token;
-        localStorage.setItem('token', token);
-        initApp();
-        toast('Conta criada!');
-      } catch (e) { toast(e.message, 'error'); }
+        const data = await api('/auth/register', 'POST', { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value });
+        token = data.token; localStorage.setItem('token', token); initApp(); toast('Conta criada!');
+      } catch (e) { toast('Erro: ' + e.message); }
     }
+    function logout() { localStorage.removeItem('token'); location.reload(); }
 
-    function logout() { localStorage.removeItem('token'); token = null; location.reload(); }
-
+    // Lógica Principal
     async function initApp() {
       if (!token) { document.getElementById('auth').classList.remove('hidden'); document.getElementById('app').classList.add('hidden'); return; }
-      document.getElementById('auth').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
+      document.getElementById('auth').classList.add('hidden'); document.getElementById('app').classList.remove('hidden');
 
       try {
         const { user } = await api('/auth/me');
         document.getElementById('user-name').textContent = user.name;
         document.getElementById('set-api-key').value = user.intervals_api_key || '';
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
-        document.getElementById('set-target-5k').value = user.target_5k_time || 1140;
-
-        const { activities } = await api('/data/activities');
-        if (activities.length > 0) {
-          const a = activities[0];
-          document.getElementById('stat-runs').textContent = a.total_runs;
-          document.getElementById('stat-dist').textContent = a.total_distance.toFixed(1);
-          document.getElementById('stat-pace').textContent = a.avg_pace ? Math.floor(a.avg_pace/60)+':'+String(Math.round(a.avg_pace%60)).padStart(2,'0') : '-';
-          document.getElementById('stat-5k').textContent = a.best_5k_time ? Math.floor(a.best_5k_time/60)+':'+String(Math.round(a.best_5k_time%60)).padStart(2,'0') : '-';
-        }
-      } catch (e) { logout(); }
+        loadPlans(); // Carrega a lista de planos ao entrar
+      } catch { logout(); }
     }
 
-    async function uploadFile() {
-      const file = document.getElementById('file-input').files[0];
-      if (!file) return toast('Selecione um arquivo', 'error');
-      const form = new FormData();
-      form.append('file', file);
-      document.getElementById('upload-result').innerHTML = '<div class="loading">Analisando com IA...</div>';
+    // Gerar Plano Iniciante
+    async function generateZeroPlan() {
+      document.getElementById('zp-result').innerHTML = '<div style="color:#38bdf8">Gerando com IA...</div>';
       try {
-        const res = await fetch('/api/data/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form });
-        const data = await res.json();
-        if (!res.ok) return toast(data.error, 'error');
-        let html = `<div class="card" style="background:#0f172a"><h3 style="color:#38bdf8">✅ ${data.message}</h3>`;
-        if (data.aiSummary) html += `<div class="summary-box">${data.aiSummary}</div>`;
-        html += `<div class="grid" style="margin-top:12px">
-          <div class="stat"><div class="value">${data.analysis.totalRuns}</div><div class="label">Corridas</div></div>
-          <div class="stat"><div class="value">${data.analysis.totalDist}</div><div class="label">Distância</div></div>
-          <div class="stat"><div class="value">${data.analysis.best5k ? Math.floor(data.analysis.best5k.time/60)+':'+String(Math.round(data.analysis.best5k.time%60)).padStart(2,'0') : '-'}</div><div class="label">Melhor 5K</div></div>
-        </div></div>`;
-        document.getElementById('upload-result').innerHTML = html;
-        toast('Dados analisados!');
-      } catch (e) { toast(e.message, 'error'); }
-    }
-
-    async function generatePlan() {
-      document.getElementById('plan-result').innerHTML = '<div class="loading">Gerando plano personalizado com IA...</div>';
-      try {
-        const res = await api('/data/generate-plan', 'POST', { weeks: parseInt(document.getElementById('plan-weeks').value), target5kMin: parseFloat(document.getElementById('plan-target').value) });
-        let html = `<div class="card" style="background:#0f172a"><h3 style="color:#38bdf8">📋 Plano gerado: ${res.sessions} sessões em ${res.weeks} semanas</h3>`;
-        html += `<div style="margin:12px 0"><strong>Pace 5K atual:</strong> ${Math.floor(res.best5kPace/60)}:${String(Math.round(res.best5kPace%60)).padStart(2,'0')}/km`;
-        html += ` | <strong>Alvo:</strong> ${Math.floor(res.target5kPace/60)}:${String(Math.round(res.target5kPace%60)).padStart(2,'0')}/km</div>`;
-        html += '<div style="max-height:400px; overflow-y:auto; padding-right:8px">';
-        res.plan.forEach(p => {
-          html += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">IA</span></div><div class="desc">${p.description.replace(/\n/g, '<br>')}</div></div>`;
+        const res = await api('/data/generate-zero-plan', 'POST', { weeks: document.getElementById('zp-weeks').value, daysPerWeek: document.getElementById('zp-days').value });
+        
+        let html = `<div class="summary-box">✅ Plano criado! ${res.sessions} sessões geradas.</div>`;
+        html += '<div style="max-height:300px; overflow-y:auto; margin-top:10px">';
+        res.plan.slice(0, 7).forEach(p => {
+           html += `<div class="plan-item"><div class="name">${p.name} <span class="ai-badge">IA</span></div><div class="desc">${p.description.substring(0, 60)}...</div></div>`;
         });
         html += '</div>';
-        html += '<button class="btn btn-success" style="margin-top:12px" onclick="syncPlan('+res.planId+')">🔄 Sincronizar com Intervals.icu</button>';
-        html += '</div>';
-        document.getElementById('plan-result').innerHTML = html;
-        toast('Plano gerado!');
-      } catch (e) { toast(e.message, 'error'); }
+        document.getElementById('zp-result').innerHTML = html;
+        
+        loadPlans(); // Atualiza a lista de salvos
+        toast('Plano gerado com sucesso!');
+      } catch (e) { toast('Erro: ' + e.message); }
     }
 
-    async function syncPlan(planId) {
+    // Carregar Lista de Planos Salvos
+    async function loadPlans() {
+      const list = document.getElementById('plans-list');
       try {
-        const res = await api('/data/sync-plan', 'POST', { planId });
-        toast(`${res.created}/${res.total} treinos sincronizados!`);
-      } catch (e) { toast(e.message, 'error'); }
+        const res = await api('/data/plans');
+        list.innerHTML = '';
+        if (res.plans.length === 0) list.innerHTML = '<p style="color:#94a3b8">Nenhum plano salvo ainda.</p>';
+        
+        res.plans.forEach(p => {
+          const pData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
+          list.innerHTML += `
+            <div class="plan-item">
+              <div class="name">${p.weeks} Semanas (${pData.plan.length} treinos)</div>
+              <div class="desc">Criado em: ${new Date(p.created_at).toLocaleDateString()}</div>
+              <button class="btn btn-outline" style="margin-top:8px; padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">Sincronizar</button>
+            </div>`;
+        });
+      } catch (e) { list.innerHTML = 'Erro ao carregar planos.'; }
+    }
+
+    async function syncPlan(id) {
+      try {
+        await api('/data/sync-plan', 'POST', { planId: id });
+        toast('Sincronizado com sucesso!');
+        loadPlans();
+      } catch (e) { toast('Erro: ' + e.message); }
     }
 
     async function saveSettings() {
       try {
-        await api('/auth/settings', 'PUT', {
-          intervals_api_key: document.getElementById('set-api-key').value,
-          intervals_athlete_id: document.getElementById('set-athlete-id').value,
-          target_5k_time: parseInt(document.getElementById('set-target-5k').value)
-        });
-        toast('Configurações salvas!');
-      } catch (e) { toast(e.message, 'error'); }
+        await api('/auth/settings', 'PUT', { intervals_api_key: document.getElementById('set-api-key').value, intervals_athlete_id: document.getElementById('set-athlete-id').value });
+        toast('Salvo!');
+      } catch (e) { toast('Erro: ' + e.message); }
     }
 
     initApp();
