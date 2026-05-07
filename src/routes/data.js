@@ -524,12 +524,32 @@ router.post('/goal-plans', auth, async (req, res) => {
   const userResult = await query('SELECT name FROM users WHERE id = $1', [req.userId]);
   const userProfile = userResult.rows[0];
 
+  // Busca o condicionamento atual do atleta para basear as zonas de treino
+  let current5kPace = null;
+  const recentRuns = await query(
+    `SELECT * FROM activity_log WHERE user_id = $1 AND type IN ('Run','TrailRun','VirtualRun') AND distance > 0 AND moving_time > 0 ORDER BY start_date DESC LIMIT 50`,
+    [req.userId]
+  );
+  if (recentRuns.rows.length >= 3) {
+    const analysis = analyzeRuns(recentRuns.rows);
+    current5kPace = analysis.best5k ? analysis.best5k.pace : analysis.avgPace;
+  }
+  if (!current5kPace) {
+    const lastActivity = await query(
+      'SELECT avg_pace FROM activities WHERE user_id = $1 AND avg_pace > 0 ORDER BY id DESC LIMIT 1',
+      [req.userId]
+    );
+    if (lastActivity.rows.length > 0) current5kPace = lastActivity.rows[0].avg_pace;
+  }
+  if (!current5kPace) current5kPace = 300; // fallback: 5:00/km
+
   const { plan, summary } = generateGoalPlan({
     distanceKm: actualDist,
     targetTimeSeconds: actualTimeSeconds,
     targetDate,
     weeks,
     planName: planName || `Plano ${actualDist}km`,
+    current5kPace,
   });
 
   const result = await query(

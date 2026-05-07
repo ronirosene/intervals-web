@@ -505,16 +505,23 @@ module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, format
 function generateGoalPlan(params) {
   const { distanceKm, targetTimeSeconds, targetDate, weeks, planName, current5kPace } = params;
   const targetPace = targetTimeSeconds / distanceKm;
+  const basePace = current5kPace || targetPace;
   const now = new Date();
 
-  const zones = {
-    easy: { min: targetPace * 1.35, max: targetPace * 1.5 },
-    marathon: { min: targetPace * 1.2, max: targetPace * 1.3 },
-    threshold: { min: targetPace * 0.95, max: targetPace * 1.05 },
-    vo2Max: { min: targetPace * 0.9, max: targetPace * 0.95 },
-    speed: { min: targetPace * 0.85, max: targetPace * 0.9 },
-    racePace: { min: targetPace * 0.97, max: targetPace * 1.0 },
-  };
+  // Função que interpola gradualmente do pace atual → pace alvo conforme a semana avança
+  function weekZones(weekIdx) {
+    const totalTrainWeeks = weeks - Math.max(2, Math.floor(weeks * 0.1)); // antes do taper
+    const progress = Math.min(1, (weekIdx - 1) / Math.max(1, totalTrainWeeks - 1));
+    const pace = basePace + (targetPace - basePace) * progress;
+    return {
+      easy: { min: pace * 1.35, max: pace * 1.5 },
+      marathon: { min: pace * 1.2, max: pace * 1.3 },
+      threshold: { min: pace * 0.95, max: pace * 1.05 },
+      vo2Max: { min: pace * 0.9, max: pace * 0.95 },
+      speed: { min: pace * 0.85, max: pace * 0.9 },
+      racePace: { min: targetPace * 0.97, max: targetPace * 1.0 },
+    };
+  }
 
   const plan = [];
   const phases = ['Base', 'Build', 'Race Prep', 'Taper'];
@@ -558,7 +565,7 @@ function generateGoalPlan(params) {
         {
           name: `[S${weekIdx}] Tempo Run`,
           tag: 'tempo',
-          desc: `Fase ${phaseName} | ${Math.round(15 * volFactor + weekIdx * 2)}min @ ${formatPace(zones.threshold.min * 60)}`,
+          desc: `Fase ${phaseName} | ${Math.round(15 * volFactor + weekIdx * 2)}min @ ${formatPace(weekZones(weekIdx).threshold.min * 60)}`,
           time: Math.round((20 + weekIdx * 2) * 60 * volFactor),
         },
         {
@@ -585,7 +592,8 @@ function generateGoalPlan(params) {
       for (const d of days) {
         const date = new Date(now);
         date.setDate(date.getDate() + (plan.length));
-        const detailedDesc = d.isRest ? d.desc : buildDetailedDescription(d.name, d.tag, zones, d.time);
+        const wz = weekZones(weekIdx);
+        const detailedDesc = d.isRest ? d.desc : buildDetailedDescription(d.name, d.tag, wz, d.time);
         plan.push({
           name: d.name,
           date: date.toISOString().split('T')[0],
@@ -596,7 +604,7 @@ function generateGoalPlan(params) {
           week: weekIdx,
           phase: phaseName,
           volumeKm: weekKm,
-          workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, zones, d.time),
+          workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, wz, d.time),
         });
       }
     }
@@ -611,5 +619,6 @@ function generateGoalPlan(params) {
     phases: phases.map((name, i) => ({ name, weeks: phaseWeeks[i], focus: i === 0 ? 'Base aeróbica' : i === 1 ? 'Desenvolvimento' : i === 2 ? 'Afinamento' : 'Recuperação' })),
   };
 
-  return { plan, summary, zones };
+  const midZones = weekZones(Math.ceil(weeks / 2));
+  return { plan, summary, zones: midZones };
 }
