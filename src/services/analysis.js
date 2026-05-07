@@ -484,13 +484,10 @@ async function syncToCalendar(plan, client) {
         moving_time: w.moving_time,
       };
       if (w.workout_doc) {
-        // Só a sintaxe na description, sem texto misturado — o parser do Intervals.icu interpreta as linhas com "- "
         const syntax = stepsToIntervalsSyntax(w.workout_doc.steps);
         if (syntax) {
-          eventData.description = syntax + '\n\n💡 ' + (w.name || '');
+          eventData.description = syntax;
         }
-        // Objeto vazio sinaliza "parseie a description como workout syntax"
-        eventData.workout_doc = {};
       }
       await client.events.createEvent(eventData);
       created++;
