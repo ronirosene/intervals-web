@@ -8,7 +8,18 @@ const { analyzeRuns, generatePlan, syncToCalendar, generateZeroPlan, generateGoa
 const { query } = require('../db/pg');
 
 const router = express.Router();
-const upload = multer({ dest: path.join(__dirname, '..', '..', 'uploads') });
+
+// Multer configurado com limite de tamanho e filtro de extensão
+const upload = multer({
+  dest: path.join(__dirname, '..', '..', 'uploads'),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.xlsx', '.xls', '.csv'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error('Formato de arquivo não permitido. Use .xlsx, .xls ou .csv'));
+  }
+});
 
 // Upload .xlsx
 router.post('/upload', auth, upload.single('file'), async (req, res) => {
@@ -40,7 +51,7 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       }
     });
   } catch (e) {
-    res.status(500).json({ error: 'Erro ao processar arquivo', details: e.message });
+    res.status(500).json({ error: 'Erro ao processar arquivo' });
   }
 });
 
@@ -63,7 +74,7 @@ router.post('/generate-plan', auth, async (req, res) => {
   const { plan, zones, best5kPace, target5kPace } = await generatePlan(analysis, userProfile, weeks, target5kMin);
 
   const result = await query(
-    'INSERT INTO training_plans (user_id, plan_name, weeks, plan_data) VALUES ($1, $2, $3, $4) RETURNING id',
+    'INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, current_week) VALUES ($1, $2, $3, $4, 1) RETURNING id',
     [req.userId, planName, weeks, JSON.stringify({ plan, zones, best5kPace, target5kPace })]
   );
 
@@ -71,6 +82,7 @@ router.post('/generate-plan', auth, async (req, res) => {
     message: 'Plano gerado', planId: result.rows[0].id,
     weeks, sessions: plan.length, plan,
     zones, best5kPace, target5kPace,
+    current_week: 1,
     analysis: { totalRuns: analysis.totalRuns, totalDist: analysis.totalDist.toFixed(1), best5k: analysis.best5k }
   });
 });
@@ -86,11 +98,11 @@ router.post('/generate-zero-plan', auth, async (req, res) => {
   const { plan, zones, best5kPace, target5kPace } = await generateZeroPlan(userProfile, weeks, daysPerWeek);
 
   const result = await query(
-    'INSERT INTO training_plans (user_id, plan_name, weeks, plan_data) VALUES ($1, $2, $3, $4) RETURNING id',
+    'INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, current_week) VALUES ($1, $2, $3, $4, 1) RETURNING id',
     [req.userId, planName, weeks, JSON.stringify({ plan, zones, best5kPace, target5kPace })]
   );
 
-  res.json({ message: 'Plano Iniciante gerado', planId: result.rows[0].id, weeks, sessions: plan.length, plan });
+  res.json({ message: 'Plano Iniciante gerado', planId: result.rows[0].id, weeks, sessions: plan.length, plan, current_week: 1 });
 });
 
 // Sincronizar com Intervals.icu
@@ -119,7 +131,7 @@ router.post('/sync-plan', auth, async (req, res) => {
 
 // Listar planos
 router.get('/plans', auth, async (req, res) => {
-  const result = await query('SELECT id, plan_name, weeks, plan_data, synced, synced_at, created_at FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC', [req.userId]);
+  const result = await query('SELECT id, plan_name, weeks, plan_data, synced, synced_at, created_at, current_week FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC', [req.userId]);
   const plans = result.rows.map(p => ({
     ...p,
     plan_data: typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data,
@@ -207,7 +219,7 @@ router.get('/dashboard', auth, async (req, res) => {
 
   // Último plano ativo (compara treinos planejados vs realizados)
   const lastPlan = await query(
-    'SELECT * FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+    'SELECT id, plan_name, weeks, plan_data, current_week, synced, synced_at, created_at FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
     [req.userId]
   );
 
@@ -234,13 +246,20 @@ router.get('/dashboard', auth, async (req, res) => {
       : lastPlan.rows[0].plan_data;
 
     if (planData.plan) {
-      // Próximo treino agendado (primeiro com data >= hoje)
+      // Filtra apenas semanas liberadas
+      const currentWeek = lastPlan.rows[0].current_week || 1;
+      const availablePlan = planData.plan.filter(w => {
+        if (w.week) return w.week <= currentWeek;
+        return true;
+      });
+
+      // Próximo treino agendado (primeiro com data >= hoje, dentro semanas liberadas)
       const today = new Date().toISOString().split('T')[0];
-      const upcoming = planData.plan.find(w => w.date >= today);
+      const upcoming = availablePlan.find(w => w.date >= today);
       if (upcoming) nextWorkout = upcoming;
 
-      // Compara último treino planejado com atividade real
-      const plannedYesterday = planData.plan.filter(w => w.date < today).pop();
+      // Compara último treino planejado dentro semanas liberadas
+      const plannedYesterday = availablePlan.filter(w => w.date < today).pop();
       if (plannedYesterday && lastAct.rows[0]) {
         plannedVsActual = {
           planned: { name: plannedYesterday.name, time: plannedYesterday.moving_time },
@@ -350,8 +369,8 @@ router.post('/goal-plans', auth, async (req, res) => {
 
   // Salva também como training_plan para compatibilidade com sync
   await query(
-    `INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, goal_plan_id)
-     VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, goal_plan_id, current_week)
+     VALUES ($1, $2, $3, $4, $5, 1)`,
     [req.userId, planName || `Plano ${actualDist}km`, weeks, JSON.stringify({ plan, zones: summary, best5kPace: null, target5kPace: targetPaceValue }), result.rows[0].id]
   );
 
@@ -376,15 +395,134 @@ router.get('/goal-plans', auth, async (req, res) => {
   res.json({ plans });
 });
 
-// Detalhes de um plano específico
+// Detalhes de um plano específico (retorna apenas semanas liberadas)
 router.get('/plan/:id', auth, async (req, res) => {
   const { id } = req.params;
   const result = await query('SELECT * FROM training_plans WHERE id = $1 AND user_id = $2', [id, req.userId]);
   if (!result.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
   const p = result.rows[0];
   const planData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
-  res.json({ plan: { ...p, plan_data: planData } });
+  const currentWeek = p.current_week || 1;
+  // Filtra apenas semanas liberadas (1 até current_week)
+  if (planData.plan) {
+    planData.plan = planData.plan.filter(w => {
+      if (w.week) return w.week <= currentWeek;
+      // Se não tem week, calcula pela data relativa
+      return true; // mostra todos se não tiver week (compatibilidade)
+    });
+  }
+  res.json({ plan: { ...p, plan_data: planData, current_week: currentWeek } });
 });
+
+// Avançar para próxima semana (com adaptação baseada no rendimento)
+router.post('/plan/:id/advance-week', auth, async (req, res) => {
+  const { id } = req.params;
+  const planRecord = await query('SELECT * FROM training_plans WHERE id = $1 AND user_id = $2', [id, req.userId]);
+  if (!planRecord.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
+
+  const p = planRecord.rows[0];
+  const planData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
+  const currentWeek = p.current_week || 1;
+  const totalWeeks = p.weeks || planData.plan.length / 7 || 4;
+
+  if (currentWeek >= totalWeeks) {
+    return res.json({ message: 'Plano completo! Todas as semanas já foram liberadas.', done: true, current_week: currentWeek });
+  }
+
+  // Busca atividades recentes para avaliar rendimento
+  const activities = await query(
+    `SELECT * FROM activity_log WHERE user_id = $1 AND start_date >= CURRENT_DATE - INTERVAL '14 days' ORDER BY start_date`,
+    [req.userId]
+  );
+
+  // Encontra treinos da semana atual
+  const currentWeekWorkouts = planData.plan ? planData.plan.filter(w => w.week === currentWeek || (!w.week && false)) : [];
+  const plannedNonRest = currentWeekWorkouts.filter(w => w.moving_time > 0 && w.name && !w.name.toLowerCase().includes('descanso'));
+  let completedCount = 0;
+
+  for (const planned of plannedNonRest) {
+    // Procura atividade realizada no mesmo dia
+    const act = activities.rows.find(a => {
+      const aDate = new Date(a.start_date).toISOString().split('T')[0];
+      return aDate === planned.date;
+    });
+    if (act && act.distance > 0) {
+      completedCount++;
+    }
+  }
+
+  const totalNonRest = Math.max(1, plannedNonRest.length);
+  const completionRate = completedCount / totalNonRest;
+
+  // Ajuste baseado no rendimento (completion rate)
+  let adjustment = 1.0;
+  if (completionRate >= 0.8) {
+    // Completou 80%+ → aumenta volume em 5% nas próximas semanas
+    adjustment = 0.95;
+  } else if (completionRate >= 0.6) {
+    // Completou 60-80% → mantém progressão normal
+    adjustment = 1.0;
+  } else if (completionRate >= 0.4) {
+    // Completou 40-60% → reduz leve incremento
+    adjustment = 1.03;
+  }
+
+  // Se completou menos de 40% dos treinos, repete a semana
+  if (completionRate < 0.4) {
+    // Não avança - repete a semana
+    await query('UPDATE training_plans SET current_week = $1 WHERE id = $2', [currentWeek, id]);
+    return res.json({
+      message: `Você completou apenas ${Math.round(completionRate * 100)}% dos treinos desta semana. Vamos repetir a Semana ${currentWeek}.`,
+      advanced: false,
+      reason: 'low_completion',
+      completionRate: Math.round(completionRate * 100),
+      current_week: currentWeek
+    });
+  }
+
+  // Avança para próxima semana e ajusta treinos futuros
+  const nextWeek = currentWeek + 1;
+
+  // Ajusta treinos das próximas semanas baseado no rendimento
+  if (planData.plan && adjustment !== 1.0) {
+    for (const w of planData.plan) {
+      if (w.week && w.week > currentWeek) {
+        // Ajusta tempo/moving_time baseado no rendimento
+        if (w.moving_time > 0) {
+          if (adjustment < 1.0) {
+            // Se foi mais rápido, aumenta um pouco o volume
+            w.moving_time = Math.round(w.moving_time * (1 + (1 - adjustment) * 0.5));
+          } else {
+            // Se foi mais lento, mantém volume parecido
+            w.moving_time = Math.round(w.moving_time / adjustment);
+          }
+        }
+      }
+    }
+  }
+
+  // Salva progresso
+  const newPlanData = JSON.stringify(planData);
+  await query(
+    'UPDATE training_plans SET current_week = $1, plan_data = $2 WHERE id = $3',
+    [nextWeek, newPlanData, id]
+  );
+
+  res.json({
+    message: `Semana ${currentWeek} concluída! Avançando para Semana ${nextWeek}.${adjustment < 1.0 ? ' Seu rendimento foi excelente, então aumentamos levemente a intensidade!' : adjustment > 1.0 ? ' Seu rendimento foi moderado, mantivemos a progressão mais suave.' : ''}`,
+    advanced: true,
+    completionRate: Math.round(completionRate * 100),
+    adjustment: adjustment,
+    current_week: nextWeek,
+    total_weeks: totalWeeks
+  });
+});
+
+// Helper: estima pace a partir de tempo e distância
+function parsePaceFromDuration(timeSec, distM) {
+  if (!distM || !timeSec || distM <= 0 || timeSec <= 0) return 0;
+  return (timeSec / distM) * 1000;
+}
 
 // Upload CSV Strava
 router.post('/upload-strava-csv', auth, upload.single('file'), async (req, res) => {

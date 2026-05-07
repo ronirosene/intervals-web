@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { query } = require('./db/pg');
 
@@ -11,9 +13,51 @@ const chatRoutes = require('./routes/chat');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// ===================== SEGURANÇA =====================
+
+// 1. Helmet — headers de segurança (XSS, CSP, etc)
+app.use(helmet({
+  contentSecurityPolicy: false, // desabilitado para permitir scripts inline do frontend SPA
+  crossOriginEmbedderPolicy: false,
+}));
+
+// 2. CORS restrito
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'https://intervals-web.onrender.com'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(null, true); // permite requisições sem origin (curl, etc)
+  },
+  credentials: true,
+}));
+
+// 3. Rate limiting global
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por janela
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+});
+app.use('/api/', globalLimiter);
+
+// 4. Rate limit mais restrito para auth (login/register)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// ===================== BANCO DE DADOS =====================
 
 async function initDb() {
   try {
@@ -61,15 +105,15 @@ async function initDb() {
         synced_at TIMESTAMP
       );
     `);
-    // Adiciona coluna plan_name se não existir (para tabelas já criadas)
     await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'Meu Plano'`).catch(() => {});
     await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS goal_plan_id INTEGER`).catch(() => {});
-    // Colunas do Strava (para tabelas já existentes)
+    await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS current_week INTEGER DEFAULT 1`).catch(() => {});
+    await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`).catch(() => {});
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_client_id TEXT`).catch(() => {});
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_client_secret TEXT`).catch(() => {});
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_refresh_token TEXT`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_state TEXT`).catch(() => {});
 
-    // Tabela para log de atividades sincronizadas em tempo real
     await query(`
       CREATE TABLE IF NOT EXISTS activity_log (
         id SERIAL PRIMARY KEY,
@@ -87,7 +131,6 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    // Tabela para planos com meta (5k/10k/21k/42k)
     await query(`
       CREATE TABLE IF NOT EXISTS goal_plans (
         id SERIAL PRIMARY KEY,
@@ -103,11 +146,13 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✅ Banco de dados inicializado');
+    console.log('\u2705 Banco de dados inicializado');
   } catch (e) {
-    console.error('❌ Erro ao inicializar DB:', e.message);
+    console.error('\u274c Erro ao inicializar DB:', e.message);
   }
 }
+
+// ===================== ROTAS =====================
 
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
@@ -117,10 +162,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
+// Handler global de erros (não expõe detalhes em produção)
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
+
 async function start() {
   await initDb();
   app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    console.log(`\u{1F680} Servidor rodando em http://localhost:${PORT}`);
   });
 }
 

@@ -25,7 +25,11 @@ REGRAS:
 5. Se perguntarem como usar o sistema, explique o fluxo: Sincronizar atividades → Dashboard → Gerar Plano (por Meta, Dados ou Iniciante) → Sincronizar com relógio
 6. Para iniciantes, recomende: aba "Iniciante" ou "Plano por Meta", 3x/semana
 7. NUNCA dê conselhos médicos - recomende um profissional se necessário
-8. Se não souber responder algo, seja honesto e sugira a FAQ`;
+8. Se não souber responder algo, seja honesto e sugira a FAQ
+9. IMPORTANTE: Quando apresentar opções ou menus, use números (1, 2, 3...) para que o sistema crie botões clicáveis automaticamente. Exemplo:
+   1. Criar plano de treino
+   2. Entender o Dashboard
+   3. Dúvidas sobre treinos`;
 
 async function chat(message, userProfile = null) {
   if (!process.env.GEMINI_API_KEY) {
@@ -68,14 +72,23 @@ function getFallbackResponse(message) {
   if (msg.includes('plano') || msg.includes('treino') || msg.includes('correr')) {
     return "🏃 O sistema cria planos progressivos! A cada semana os treinos ficam um pouco mais longos ou intensos, com uma semana de recuperação a cada 3 semanas. Tudo baseado nos seus dados ou no seu nível atual.";
   }
+  if (msg.includes('semana') || msg.includes('avançar') || msg.includes('progress')) {
+    return "📅 Você só vê a semana atual do seu plano. Conforme completa os treinos, clique em 'Concluir Semana e Avançar' para liberar a próxima. O sistema ajusta a intensidade baseado no seu rendimento!";
+  }
   if (msg.includes('olá') || msg.includes('oi') || msg.includes('bom dia') || msg.includes('boa tarde') || msg.includes('boa noite')) {
-    return "Olá! 👋 Sou seu assistente de corrida. Posso ajudar com dúvidas sobre treinos, explicar como usar o sistema, ou dar dicas para começar. O que você precisa?";
+    return "Olá! 👋 Sou seu assistente de corrida. Escolha uma opção:\n\n1. Criar plano de treino\n2. Entender o Dashboard\n3. Sincronizar com relógio\n4. Dicas para iniciantes\n5. Explicar zonas de treino";
   }
   if (msg.includes('obrig') || msg.includes('valeu') || msg.includes('brigad')) {
     return "Por nada! 🏃‍♂️ Continue firme que os resultados vêm. Qualquer dúvida, estou aqui!";
   }
+  if (msg.includes('dashboard') || msg.includes('painel') || msg.includes('confiança')) {
+    return "📊 O Dashboard mostra:\n\n1. Última atividade sincronizada\n2. Comparativo planejado vs realizado\n3. Próximo treino do seu plano ativo\n4. Nível de Confiança (0-100) baseado na sua consistência\n\nQuer saber mais sobre algum desses?";
+  }
+  if (msg.includes('zona') || msg.includes('pace') || msg.includes('ritmo')) {
+    return "📐 As zonas de treino são calculadas baseadas no seu melhor 5K:\n\n1. Z2 (Easy): 120-150% do pace 5K\n2. Z4 (Threshold): 95-105% do pace 5K\n3. VO2Max: 90-95% do pace 5K\n4. Speed: 85-90% do pace 5K\n\nQuer exemplos práticos de zonas?";
+  }
   
-  return "Olá! 👋 Posso ajudar com:\n\n🌱 Como começar (plano iniciante)\n📁 Como analisar seus dados (upload)\n🔗 Como sincronizar com o relógio\n🏃 Dúvidas sobre treinos\n\nO que você quer saber?";
+  return "👋 Posso ajudar com:\n\n1. 🌱 Criar plano para iniciante\n2. 🎯 Criar plano para uma meta (5k, 10k, 21k, 42k)\n3. 📊 Entender o Dashboard\n4. 🔗 Sincronizar com Intervals.icu\n5. 📐 Explicar zonas de treino\n6. 📁 Upload de dados para análise\n\nEscolha uma opção digitando o número ou clicando nele!";
 }
 
 module.exports = { chat };

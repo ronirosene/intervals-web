@@ -5,120 +5,344 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roni Treinos IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0b1120;
+      --bg-card: rgba(30,41,59,0.85);
+      --border: rgba(51,65,85,0.5);
+      --border-light: rgba(51,65,85,0.3);
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56,189,248,0.15);
+      --success: #22c55e;
+      --warning: #fbbf24;
+      --danger: #ef4444;
+      --sidebar-width: 220px;
+    }
+    html, body { height: 100%; }
     body {
       font-family: 'Inter', -apple-system, system-ui, sans-serif;
-      background: #0b1120;
-      color: #e2e8f0;
-      min-height: 100vh;
-      position: relative;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
     }
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background-image: radial-gradient(circle, rgba(56,189,248,0.07) 1px, transparent 1px);
+      background-image: radial-gradient(circle, rgba(56,189,248,0.06) 1px, transparent 1px);
       background-size: 24px 24px;
       pointer-events: none;
       z-index: 0;
     }
-    body::after {
-      content: '';
+
+    /* ============ SIDEBAR ============ */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-height: 100vh;
+      background: rgba(15,23,42,0.9);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
       position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.04) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
+      left: 0; top: 0;
+      z-index: 100;
+      padding: 20px 0;
+      overflow-y: auto;
     }
-    .container { max-width: 1000px; margin: 0 auto; padding: 20px; position: relative; z-index: 1; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid rgba(51,65,85,0.6); margin-bottom: 30px; }
-    .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-    .logo svg { flex-shrink: 0; }
-    .logo-text { display: flex; flex-direction: column; }
-    .logo-text h1 { font-size: 1.3rem; font-weight: 800; color: #38bdf8; letter-spacing: -0.5px; line-height: 1.2; }
-    .logo-text span { font-size: 0.65rem; color: #64748b; font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; }
-    h1 { font-size: 1.5rem; color: #38bdf8; }
-    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; font-family: 'Inter', sans-serif; }
-    .btn-primary { background: #38bdf8; color: #0f172a; }
-    .btn-primary:hover { background: #7dd3fc; transform: translateY(-1px); }
-    .btn-success { background: #22c55e; color: #0f172a; }
-    .btn-success:hover { background: #4ade80; transform: translateY(-1px); }
-    .btn-danger { background: #ef4444; color: white; font-size: 0.75rem; }
-    .btn-danger:hover { background: #f87171; }
-    .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
-    .btn-outline:hover { border-color: #38bdf8; color: #38bdf8; }
-    .card { background: rgba(30,41,59,0.85); backdrop-filter: blur(8px); border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(51,65,85,0.5); }
-    .card h2 { color: #38bdf8; margin-bottom: 16px; font-size: 1.2rem; }
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px 20px;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 12px;
+    }
+    .sidebar-logo svg { flex-shrink: 0; }
+    .sidebar-logo-text h1 { font-size: 1rem; font-weight: 800; color: var(--accent); letter-spacing: -0.3px; line-height: 1.2; }
+    .sidebar-logo-text span { font-size: 0.6rem; color: var(--text-dim); font-weight: 400; letter-spacing: 1.2px; text-transform: uppercase; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: 0.2s;
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      user-select: none;
+    }
+    .nav-item:hover { background: rgba(56,189,248,0.05); color: var(--text); }
+    .nav-item.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
+    .nav-item .icon { font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+
+    .nav-group-label {
+      padding: 16px 16px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .nav-group-label .arrow {
+      float: right;
+      transition: transform 0.2s;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .nav-group-label .arrow.open { transform: rotate(90deg); }
+    .nav-group-children { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+    .nav-group-children.open { max-height: 200px; }
+    .nav-group-children .nav-item { padding-left: 36px; font-size: 0.82rem; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-footer .user-name { font-size: 0.78rem; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-footer .logout-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; padding: 4px; border-radius: 4px; transition: 0.2s; }
+    .sidebar-footer .logout-btn:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+    /* Mobile overlay */
+    .sidebar-toggle { display: none; }
+    .sidebar-overlay { display: none; }
+
+    /* ============ MAIN CONTENT ============ */
+    .main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+      padding: 24px 28px;
+      max-width: calc(100vw - var(--sidebar-width));
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    /* ============ CARDS / BUTTONS / FORMS ============ */
+    h1 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; font-weight: 700; }
+    h2 { font-size: 1.15rem; color: var(--accent); margin-bottom: 16px; font-weight: 600; }
+    .btn {
+      padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 0.85rem; font-weight: 600; transition: 0.2s;
+      font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-primary:hover:not(:disabled) { background: #7dd3fc; transform: translateY(-1px); }
+    .btn-success { background: var(--success); color: #0f172a; }
+    .btn-success:hover:not(:disabled) { background: #4ade80; transform: translateY(-1px); }
+    .btn-danger { background: var(--danger); color: white; font-size: 0.75rem; }
+    .btn-danger:hover:not(:disabled) { background: #f87171; }
+    .btn-outline { background: transparent; border: 1px solid #475569; color: var(--text-muted); }
+    .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .card {
+      background: var(--bg-card); backdrop-filter: blur(8px);
+      border-radius: 12px; padding: 24px; margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
     .stat { text-align: center; padding: 16px; background: rgba(15,23,42,0.6); border-radius: 8px; }
-    .stat .value { font-size: 2rem; font-weight: 700; color: #38bdf8; }
-    .stat .label { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.6); border-radius: 6px; color: #e2e8f0; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s; }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
-    .hidden { display: none; }
-    #auth { text-align: center; padding: 40px 0; }
-    #auth .card { max-width: 400px; margin: 0 auto; }
-    .auth-logo { margin-bottom: 24px; }
+    .stat .value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px 12px; background: rgba(15,23,42,0.8);
+      border: 1px solid var(--border-light); border-radius: 6px; color: var(--text);
+      font-size: 0.88rem; font-family: 'Inter', sans-serif; transition: 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .hidden { display: none !important; }
     .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab { padding: 8px 16px; background: rgba(30,41,59,0.6); border: 1px solid rgba(51,65,85,0.4); border-radius: 6px; cursor: pointer; color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 0.85rem; transition: 0.2s; }
-    .tab:hover { border-color: #38bdf8; color: #38bdf8; }
-    .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 600; }
-    .plan-item { padding: 12px; background: rgba(15,23,42,0.6); border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #38bdf8; }
+    .plan-item {
+      padding: 12px; background: rgba(15,23,42,0.6); border-radius: 6px;
+      margin-bottom: 8px; border-left: 3px solid var(--accent);
+    }
     .plan-item .name { font-weight: 600; }
-    .plan-item .desc { font-size: 0.85rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4; }
-    .plan-item .actions { display: flex; gap: 6px; margin-top: 8px; }
-    .ai-badge { background: linear-gradient(45deg, #38bdf8, #818cf8); color: #0f172a; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
-    .summary-box { background: rgba(15,23,42,0.6); padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid rgba(71,85,105,0.4); color: #94a3b8; font-style: italic; }
-    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #22c55e; color: #0f172a; border-radius: 8px; font-weight: 600; z-index: 1000; transform: translateY(100px); transition: 0.3s; }
-    .toast.show { transform: translateY(0); }
-    .toast.error { background: #ef4444; }
-    .faq-item { padding: 14px; background: rgba(15,23,42,0.6); border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid rgba(51,65,85,0.4); }
-    .faq-item .faq-q { font-weight: 600; color: #38bdf8; }
-    .faq-item .faq-a { margin-top: 8px; color: #94a3b8; display: none; line-height: 1.6; }
-    .faq-item.open .faq-a { display: block; }
-    /* Chat */
-    .chat-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #38bdf8, #818cf8); border: none; color: #0f172a; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 20px rgba(56,189,248,0.4); z-index: 999; transition: 0.3s; }
-    .chat-btn:hover { transform: scale(1.1); }
-    .chat-widget { position: fixed; bottom: 90px; right: 24px; width: 340px; max-height: 460px; background: #1e293b; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 999; display: none; flex-direction: column; overflow: hidden; }
-    .chat-widget.open { display: flex; }
-    .chat-header { padding: 14px 16px; background: linear-gradient(135deg, #1e293b, #334155); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-    .chat-header span { font-weight: 600; color: #38bdf8; }
-    .chat-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
-    .chat-messages { flex: 1; padding: 12px; overflow-y: auto; max-height: 320px; }
-    .chat-msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 12px; max-width: 85%; font-size: 0.85rem; line-height: 1.5; }
-    .chat-msg.user { background: #38bdf8; color: #0f172a; margin-left: auto; border-bottom-right-radius: 4px; }
-    .chat-msg.ai { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-bottom-left-radius: 4px; }
-    .chat-msg.ai .ai-badge { font-size: 0.65rem; background: #38bdf8; color:#0f172a; padding:1px 5px; border-radius:3px; margin-right:4px; }
-    .chat-input-area { display: flex; padding: 10px; gap: 8px; border-top: 1px solid #334155; background: #0f172a; }
-    .chat-input-area input { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 20px; color: #e2e8f0; font-size: 0.85rem; outline: none; font-family: 'Inter', sans-serif; }
-    .chat-input-area input:focus { border-color: #38bdf8; }
-    .chat-input-area button { background: #38bdf8; border: none; border-radius: 50%; width: 32px; height: 32px; color: #0f172a; cursor: pointer; font-size: 1rem; }
-    .chat-input-area button:disabled { opacity: 0.4; }
-    .chat-welcome { color: #94a3b8; font-size: 0.8rem; padding: 16px; text-align: center; }
+    .plan-item .desc { font-size: 0.83rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4; }
+    .plan-item .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .ai-badge {
+      background: linear-gradient(45deg, var(--accent), #818cf8);
+      color: #0f172a; font-size: 0.65rem; padding: 2px 6px;
+      border-radius: 4px; margin-left: 6px; font-weight: 600;
+    }
+    .summary-box {
+      background: rgba(15,23,42,0.6); padding: 16px; border-radius: 8px;
+      margin-top: 12px; border: 1px solid var(--border-light);
+      color: var(--text-muted); font-style: italic; line-height: 1.5;
+    }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 24px; border-radius: 10px;
+      background: var(--success); color: #0f172a;
+      font-weight: 600; z-index: 9999;
+      transform: translateY(120px); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 8px 24px rgba(34,197,94,0.3);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { background: var(--danger); box-shadow: 0 8px 24px rgba(239,68,68,0.3); }
     .stat-detailed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .stat-detailed div { padding: 8px; background: rgba(15,23,42,0.6); border-radius: 4px; text-align: center; }
-    .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
-    .stat-detailed .lbl { font-size: 0.7rem; color: #94a3b8; }
-    .speedometer { background: rgba(15,23,42,0.6); border-radius: 8px; padding: 16px; text-align: center; }
-    .meta-card { border-left: 3px solid #fbbf24; }
-    @media (max-width: 600px) {
-      .container { padding: 12px; }
-      header { flex-direction: column; gap: 12px; }
-      .logo-text h1 { font-size: 1.1rem; }
+    .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+    .stat-detailed .lbl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .faq-item { padding: 14px; background: rgba(15,23,42,0.6); border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-light); transition: 0.2s; }
+    .faq-item:hover { border-color: var(--accent); }
+    .faq-item .faq-q { font-weight: 600; color: var(--accent); }
+    .faq-item .faq-a { margin-top: 8px; color: var(--text-muted); display: none; line-height: 1.6; }
+    .faq-item.open .faq-a { display: block; }
+
+    .section-title { font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+    .week-progress { display:flex; align-items:center; gap:12px; margin:12px 0; padding:12px; background:rgba(15,23,42,0.6); border-radius:8px; }
+    .week-progress .bar-wrap { flex:1; height:8px; background:rgba(51,65,85,0.5); border-radius:4px; overflow:hidden; }
+    .week-progress .bar-fill { height:100%; background:linear-gradient(90deg, var(--accent), var(--success)); border-radius:4px; transition:width 0.5s; }
+
+    /* Quick actions (Upload section) */
+    .quick-actions { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+    .quick-card { background:rgba(15,23,42,0.6); border-radius:10px; padding:18px; border:1px solid var(--border-light); }
+    .quick-card h3 { color:var(--accent); font-size:0.88rem; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+    .quick-card .form-group { margin-bottom:6px; }
+    .quick-card .form-group label { font-size:0.7rem; }
+    .quick-card .form-group input { font-size:0.78rem; padding:6px 8px; }
+    .quick-card .btn { width:100%; padding:6px; font-size:0.78rem; margin-top:4px; }
+
+    /* ============ CHAT ============ */
+    .chat-btn { position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #818cf8); border: none; color: #0f172a; font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 20px rgba(56,189,248,0.4); z-index: 999; transition: 0.3s; }
+    .chat-btn:hover { transform: scale(1.08); }
+    .chat-widget { position: fixed; bottom: 84px; right: 24px; width: 340px; max-height: 480px; background: #1e293b; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 999; display: none; flex-direction: column; overflow: hidden; }
+    .chat-widget.open { display: flex; }
+    .chat-header { padding: 14px 16px; background: linear-gradient(135deg, #1e293b, #334155); border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+    .chat-header span { font-weight: 600; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+    .chat-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 4px; }
+    .chat-close:hover { color: var(--text); }
+    .chat-messages { flex: 1; padding: 12px; overflow-y: auto; max-height: 340px; }
+    .chat-msg { margin-bottom: 10px; padding: 8px 14px; border-radius: 12px; max-width: 88%; font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
+    .chat-msg.user { background: var(--accent); color: #0f172a; margin-left: auto; border-bottom-right-radius: 4px; }
+    .chat-msg.ai { background: #0f172a; color: #cbd5e1; border: 1px solid var(--border-light); border-bottom-left-radius: 4px; }
+    .chat-msg.ai .ai-badge { font-size: 0.6rem; background: var(--accent); color:#0f172a; padding:1px 5px; border-radius:3px; margin-right:4px; font-weight:600; }
+    .chat-input-area { display: flex; padding: 10px; gap: 8px; border-top: 1px solid var(--border-light); background: #0f172a; }
+    .chat-input-area input { flex: 1; padding: 8px 14px; background: #1e293b; border: 1px solid var(--border-light); border-radius: 20px; color: var(--text); font-size: 0.85rem; outline: none; font-family: 'Inter', sans-serif; }
+    .chat-input-area input:focus { border-color: var(--accent); }
+    .chat-input-area button { background: var(--accent); border: none; border-radius: 50%; width: 32px; height: 32px; color: #0f172a; cursor: pointer; font-size: 1rem; flex-shrink: 0; }
+    .chat-input-area button:disabled { opacity: 0.4; }
+    .chat-welcome { color: var(--text-muted); font-size: 0.8rem; padding: 12px; text-align: center; }
+    .chat-option-btn { display:block; width:100%; padding:7px 12px; margin:3px 0; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); border-radius:8px; color:var(--accent); cursor:pointer; font-size:0.8rem; font-family:'Inter',sans-serif; text-align:left; transition:0.15s; }
+    .chat-option-btn:hover { background:rgba(56,189,248,0.2); }
+
+    /* ============ MOBILE RESPONSIVE ============ */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); z-index: 99;
+      }
+      .sidebar-overlay.open { display: block; }
+      .sidebar-toggle {
+        display: flex; align-items: center; gap: 8px;
+        position: fixed; top: 12px; left: 12px; z-index: 101;
+        background: rgba(15,23,42,0.9); backdrop-filter: blur(12px);
+        border: 1px solid var(--border); border-radius: 8px;
+        padding: 8px 12px; color: var(--accent); cursor: pointer;
+        font-size: 1.2rem;
+      }
+      .main {
+        margin-left: 0; padding: 60px 16px 16px;
+        max-width: 100vw;
+      }
+      .quick-actions { grid-template-columns: 1fr; }
+      .stat-detailed { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div id="auth">
-      <div class="auth-logo">
+
+  <!-- ==================== SIDEBAR TOGGLE (mobile) ==================== -->
+  <div class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">☰</div>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="25" r="18" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+        <circle cx="25" cy="16" r="5" fill="#38bdf8"/>
+        <path d="M18 32 Q16 28, 21 26 Q25 24, 28 22 Q32 20, 36 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M13 38 Q14 34, 18 32" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        <path d="M36 17 L38 13 L42 14" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="sidebar-logo-text">
+        <h1>Roni Treinos IA</h1>
+        <span>Coach inteligente</span>
+      </div>
+    </div>
+
+    <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" data-section="upload" onclick="showSection('upload')">
+      <span class="icon">📁</span> Upload
+    </div>
+
+    <div class="nav-group-label">
+      TREINO
+      <span class="arrow" id="treino-arrow" onclick="event.stopPropagation();toggleTreinoGroup()">▶</span>
+    </div>
+    <div class="nav-group-children open" id="treino-group">
+      <div class="nav-item" data-section="zeroplane" onclick="showSection('zeroplane')">
+        <span class="icon">🌱</span> Iniciante
+      </div>
+      <div class="nav-item" data-section="meta" onclick="showSection('meta')">
+        <span class="icon">🎯</span> Plano por Meta
+      </div>
+    </div>
+
+    <div class="nav-item" data-section="plans" onclick="showSection('plans')">
+      <span class="icon">📅</span> Planos
+    </div>
+    <div class="nav-item" data-section="faq" onclick="showSection('faq')">
+      <span class="icon">❓</span> FAQ
+    </div>
+    <div class="nav-item" data-section="settings" onclick="showSection('settings')">
+      <span class="icon">⚙️</span> Configurações
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="user-name" id="sidebar-user-name">Carregando...</span>
+      <button class="logout-btn" onclick="logout()" title="Sair">⏻</button>
+    </div>
+  </nav>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="main">
+
+    <!-- Auth Section -->
+    <div id="auth" class="container" style="text-align:center; padding-top:60px">
+      <div style="margin-bottom:24px">
         <svg width="140" height="50" viewBox="0 0 140 50" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="25" cy="25" r="18" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
           <circle cx="25" cy="16" r="5" fill="#38bdf8"/>
@@ -129,338 +353,291 @@
           <text x="52" y="35" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" fill="#818cf8">Treinos IA</text>
         </svg>
       </div>
-      <div class="card">
-        <div class="tabs">
-          <div class="tab active" onclick="showTab('login')">Login</div>
-          <div class="tab" onclick="showTab('register')">Registrar</div>
+      <div class="card" style="max-width:400px; margin:0 auto">
+        <div class="tabs" style="justify-content:center">
+          <div class="tab active" style="padding:8px 20px;background:rgba(30,41,59,0.6);border:1px solid rgba(51,65,85,0.4);border-radius:6px;cursor:pointer;color:#94a3b8;font-family:'Inter',sans-serif;font-size:0.85rem;transition:0.2s;" onclick="showLoginTab('login')">Login</div>
+          <div class="tab" style="padding:8px 20px;background:rgba(30,41,59,0.6);border:1px solid rgba(51,65,85,0.4);border-radius:6px;cursor:pointer;color:#94a3b8;font-family:'Inter',sans-serif;font-size:0.85rem;transition:0.2s;" onclick="showLoginTab('register')">Registrar</div>
         </div>
         <div id="login-form">
-          <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="login-password" placeholder="••••••"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="login-password" placeholder="mín. 6 caracteres" autocomplete="current-password"></div>
           <button class="btn btn-primary" style="width:100%" onclick="login()">Entrar</button>
+          <div id="login-error" style="color:#ef4444; margin-top:8px; font-size:0.85rem"></div>
         </div>
         <div id="register-form" class="hidden">
           <div class="form-group"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
           <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="reg-password" placeholder="••••••"></div>
+          <div class="form-group"><label>Senha (mín. 6 caracteres)</label><input type="password" id="reg-password" placeholder="••••••"></div>
           <button class="btn btn-primary" style="width:100%" onclick="register()">Criar conta</button>
+          <div id="register-error" style="color:#ef4444; margin-top:8px; font-size:0.85rem"></div>
         </div>
       </div>
     </div>
 
-    <div id="app" class="hidden">
-      <header>
-        <div class="logo">
-          <svg width="32" height="32" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="25" cy="25" r="18" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
-            <circle cx="25" cy="16" r="5" fill="#38bdf8"/>
-            <path d="M18 32 Q16 28, 21 26 Q25 24, 28 22 Q32 20, 36 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none"/>
-            <path d="M13 38 Q14 34, 18 32" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-            <path d="M36 17 L38 13 L42 14" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          </svg>
-          <div class="logo-text">
-            <h1>Roni Treinos IA</h1>
-            <span>Coach inteligente</span>
-          </div>
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="dashboard" class="container hidden">
+      <div class="section-title">📊 Dashboard</div>
+      <div class="card">
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="syncActivities()">🔄 Sincronizar do Intervals.icu</button>
+          <button class="btn btn-outline" onclick="loadDashboard()">🔄 Atualizar</button>
         </div>
-        <div>
-          <span id="user-name" style="color:#94a3b8; margin-right:10px; font-size:0.9rem"></span>
-          <button class="btn btn-outline" onclick="logout()">Sair</button>
-        </div>
-      </header>
-
-      <div class="tabs">
-        <div class="tab active" onclick="showSection('dashboard')">📊 Dashboard</div>
-        <div class="tab" onclick="showSection('upload')">📁 Upload</div>
-        <div class="tab" onclick="showSection('zeroplane')">🌱 Iniciante</div>
-        <div class="tab" onclick="showSection('meta')">🎯 Plano por Meta</div>
-        <div class="tab" onclick="showSection('plans')">Planos</div>
-        <div class="tab" onclick="showSection('faq')">❓ FAQ</div>
-        <div class="tab" onclick="showSection('settings')">⚙️</div>
-      </div>
-
-      <!-- Dashboard -->
-      <div id="dashboard">
-        <div class="card"><h2>📊 Painel</h2>
-          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="syncActivities()">🔄 Sincronizar do Intervals.icu</button>
-            <button class="btn btn-outline" onclick="loadDashboard()">🔄 Atualizar Painel</button>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
-            <!-- Manual Activity -->
-            <div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">
-              <h3 style="color:#38bdf8; font-size:0.9rem; margin-bottom:8px">✍️ Adicionar Corrida Manual</h3>
-              <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Data</label><input type="date" id="manual-date" style="font-size:0.8rem; padding:6px"></div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
-                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Distância (km)</label><input type="number" id="manual-dist" step="0.01" style="font-size:0.8rem; padding:6px"></div>
-                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Duração (min)</label><input type="number" id="manual-min" step="0.5" style="font-size:0.8rem; padding:6px"></div>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
-                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">FC média (opc)</label><input type="number" id="manual-hr" style="font-size:0.8rem; padding:6px"></div>
-                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Anotações</label><input type="text" id="manual-notes" placeholder="ex: Treino leve" style="font-size:0.8rem; padding:6px"></div>
-              </div>
-              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:0.8rem; margin-top:4px" onclick="addManualActivity()">➕ Adicionar</button>
-              <div id="manual-result" style="margin-top:6px"></div>
-            </div>
-
-            <!-- Strava Link Import -->
-            <div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">
-              <h3 style="color:#38bdf8; font-size:0.9rem; margin-bottom:8px">🔗 Importar do Strava por Link</h3>
-              <p style="color:#94a3b8; font-size:0.7rem; margin-bottom:6px">Cole o link da sua atividade do Strava</p>
-              <div class="form-group" style="margin-bottom:6px"><input type="text" id="strava-link" placeholder="https://www.strava.com/activities/..." style="font-size:0.8rem; padding:6px"></div>
-              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:0.8rem" onclick="importStravaLink()">📥 Importar</button>
-              <div id="strava-link-result" style="margin-top:6px"></div>
-            </div>
-          </div>
-
-          <div id="dashboard-content">
-            <p style="color:#94a3b8">Clique em "Sincronizar" para buscar suas atividades recentes do Intervals.icu.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Upload Intervals -->
-      <div id="upload" class="hidden">
-        <div class="card"><h2>📁 Upload de Atividades (Intervals.icu)</h2>
-          <p style="color:#94a3b8; margin-bottom:12px">Envie seu arquivo .xlsx exportado do Intervals.icu para análise completa.</p>
-          <input type="file" id="file-input" accept=".xlsx,.xls" style="width:100%; padding:20px; border:2px dashed rgba(51,65,85,0.5); border-radius:8px; color:#94a3b8; cursor:pointer; background:rgba(15,23,42,0.4)">
-          <button class="btn btn-primary" style="margin-top:12px" onclick="uploadFile()">📊 Analisar Dados</button>
-          <div id="upload-result" style="margin-top:12px"></div>
-        </div>
-        <div class="card" id="gen-plan-card" style="display:none"><h2>🏗️ Gerar Plano a partir dos Dados</h2>
-          <div class="grid">
-            <div class="form-group"><label>Nome do Plano</label><input type="text" id="gen-name" value="Plano Baseado em Dados"></div>
-            <div class="form-group"><label>Meta 5K (min)</label><input type="number" id="gen-target" value="19" step="0.5"></div>
-            <div class="form-group"><label>Semanas</label><input type="number" id="gen-weeks" value="4" min="1"></div>
-          </div>
-          <button class="btn btn-success" onclick="generatePlan()">✨ Gerar Plano + IA</button>
-          <div id="gen-result" style="margin-top:12px"></div>
-        </div>
-      </div>
-
-      <!-- Iniciante -->
-      <div id="zeroplane" class="hidden">
-        <div class="card"><h2>🌱 Plano do Zero</h2>
-          <p style="color:#94a3b8; margin-bottom:12px">Sem dados? Nossa IA cria um plano seguro para você começar.</p>
-          <div class="grid">
-            <div class="form-group"><label>Nome do Plano</label><input type="text" id="zp-name" value="Meu Plano Iniciante"></div>
-            <div class="form-group"><label>Dias/semana</label><input type="number" id="zp-days" value="3" min="2" max="5"></div>
-            <div class="form-group"><label>Semanas</label><input type="number" id="zp-weeks" value="4" min="2" max="8"></div>
-          </div>
-          <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Plano Iniciante</button>
-          <div id="zp-result" style="margin-top:12px"></div>
-        </div>
-      </div>
-
-      <!-- Plano por Meta -->
-      <div id="meta" class="hidden">
-        <div class="card"><h2>🎯 Plano de Treino por Meta</h2>
-          <p style="color:#94a3b8; margin-bottom:12px">Crie um plano personalizado para sua próxima prova! Escolha a distância, o tempo esperado e a data alvo.</p>
-          <div class="grid">
-            <div class="form-group"><label>Nome do Plano</label><input type="text" id="goal-name" value="Plano para Prova"></div>
-            <div class="form-group"><label>Distância da Prova</label><select id="goal-dist">
-              <option value="5">5km</option>
-              <option value="10">10km</option>
-              <option value="21.1">21km (Meia Maratona)</option>
-              <option value="42.2">42km (Maratona)</option>
-            </select></div>
-            <div class="form-group"><label>Tempo Alvo (minutos)</label><input type="number" id="goal-time" placeholder="ex: 25 para 5km em 25min"></div>
-            <div class="form-group"><label>Data da Prova</label><input type="date" id="goal-date"></div>
-          </div>
-          <button class="btn btn-success" onclick="generateGoalPlan()">🎯 Gerar Plano para Meta</button>
-          <div id="goal-result" style="margin-top:12px"></div>
-        </div>
-      </div>
-
-      <!-- Planos -->
-      <div id="plans" class="hidden">
-        <div class="card"><h2>📅 Meus Planos Salvos</h2><div id="plans-list">Carregando...</div></div>
-      </div>
-
-      <!-- Detalhes do Plano -->
-      <div id="plan-detail" class="hidden">
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
-            <h2 id="pd-title" style="margin:0">📋 Detalhes do Plano</h2>
-            <button class="btn btn-outline" onclick="closePlanDetail()">✕ Fechar</button>
-          </div>
-          <div id="pd-summary" style="margin-bottom:16px"></div>
-          <div id="pd-workouts" style="max-height:500px; overflow-y:auto"></div>
-        </div>
-      </div>
-
-      <!-- FAQ -->
-      <div id="faq" class="hidden">
-        <div class="card"><h2>❓ FAQ — Como funciona o sistema?</h2>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">📊 O que tem no Dashboard?</div>
-            <div class="faq-a">O Dashboard reúne tudo que você precisa pra acompanhar sua evolução:<br><br>
-            • <strong>Última Atividade:</strong> mostra a corrida mais recente importada do Intervals.icu, com distância, ritmo e duração.<br>
-            • <strong>Planejado vs Realizado:</strong> compara o último treino do seu plano com o que você realmente fez.<br>
-            • <strong>Próximo Treino:</strong> prévia do próximo treino agendado no seu plano ativo.<br>
-            • <strong>Nível de Confiança:</strong> velocímetro de 0 a 100 baseado na sua consistência (frequência e volume dos últimos 30 dias). Quanto mais regular, maior a confiança de bater sua meta!<br>
-            • <strong>Meta Ativa:</strong> se você criou um Plano por Meta, ele aparece aqui com distância, ritmo alvo e data da prova.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">🔄 Como funciona a sincronia em tempo real com o Intervals.icu?</div>
-            <div class="faq-a">Você não precisa mais exportar arquivos toda vez! No Dashboard, clique em <strong>"Sincronizar do Intervals.icu"</strong> e o sistema busca automaticamente suas atividades recentes (até 60 dias) usando sua API Key.<br><br>
-            As atividades são armazenadas no banco de dados e usadas para:<br>
-            • Alimentar o Dashboard com sua última corrida<br>
-            • Calcular seu Nível de Confiança<br>
-            • Comparar treinos planejados vs realizados<br><br>
-            <strong>Pré-requisito:</strong> Ter a API Key e Athlete ID configurados em ⚙️ Configurações.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">🎯 Como criar um Plano por Meta (5k, 10k, 21k, 42k)?</div>
-            <div class="faq-a">Na aba <strong>"Plano por Meta"</strong> você pode criar um plano de treino personalizado para qualquer distância:<br><br>
-            <strong>Passo a passo:</strong><br>
-            1. Escolha a <strong>distância</strong>: 5km, 10km, 21km (Meia Maratona) ou 42km (Maratona)<br>
-            2. Defina seu <strong>tempo alvo</strong> (ex: 25 min para 5km)<br>
-            3. Selecione a <strong>data da prova</strong> (mínimo 3 meses de preparação)<br>
-            4. Clique em "Gerar Plano para Meta"<br><br>
-            O sistema calcula automaticamente:<br>
-            • <strong>Duração ideal</strong> do plano (entre 12 e 52 semanas)<br>
-            • <strong>4 fases de periodização:</strong> Base → Build → Race Prep → Taper<br>
-            • <strong>Zonas de treino</strong> baseadas no seu pace alvo<br>
-            • Treinos específicos: intervalos, tempo runs, long runs progressivos<br><br>
-            O plano gerado também aparece na aba "Planos" e pode ser sincronizado com o Intervals.icu.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">📈 Como funciona o Nível de Confiança?</div>
-            <div class="faq-a">O velocímetro de confiança (0-100) avalia suas chances de bater a meta com base nos <strong>últimos 30 dias de treinos</strong>:<br><br>
-            • <strong>Frequência (0-40 pts):</strong> quantas corridas você fez no mês (ideal: 12+ corridas)<br>
-            • <strong>Volume (0-40 pts):</strong> sua média semanal em km (ideal: 25km+/semana)<br>
-            • <strong>Consistência (0-20 pts):</strong> há quantas semanas você está treinando regularmente<br><br>
-            <strong>Cores:</strong><br>
-            🔴 <strong>0-39:</strong> Baixo — precisa treinar com mais regularidade<br>
-            🟡 <strong>40-69:</strong> Médio — está no caminho certo, continue evoluindo<br>
-            🟢 <strong>70-100:</strong> Alto — ótima consistência! Vai conseguir bater sua meta!
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">📐 Como o algoritmo calcula meu pace ideal?</div>
-            <div class="faq-a">O sistema analisa seu melhor 5K (ou dados de corridas recentes) e aplica a metodologia de treinamento baseada em zonas de intensidade:<br>
-            <br><strong>Zonas calculadas:</strong>
-            <br>• 🟢 <strong>Easy (Z2)</strong>: 120-150% do pace 5K — corrida leve, aeróbica
-            <br>• 🟡 <strong>Marathon</strong>: 110-125% — ritmo de conversação forte
-            <br>• 🟠 <strong>Threshold (Z4)</strong>: 95-105% — limiar de lactato
-            <br>• 🔴 <strong>VO2Max</strong>: 90-95% — potência aeróbica máxima
-            <br>• ⚡ <strong>Speed</strong>: 85-90% — velocidade pura (tiros de 400m)
-            <br><br><strong>Exemplo:</strong> Se seu melhor 5K é 20min (4:00/km), seu Threshold será ~4:00-4:12/km e seu Easy será ~5:20-6:00/km.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">🔄 Como o sistema refaz os treinos ao longo das semanas?</div>
-            <div class="faq-a">O plano usa <strong>periodização ondulatória</strong> com 3 princípios:<br><br>
-            1. <strong>Progressão:</strong> A cada semana, o volume (+5-10%) ou a intensidade (mais repetições) aumenta gradualmente.<br>
-            2. <strong>Recuperação cíclica:</strong> A cada 3 semanas, a 4ª é de recuperação (volume cai 25%, intensidade reduzida).<br>
-            3. <strong>Especificidade:</strong> Quanto mais perto da meta, mais treinos específicos (ritmo de prova, VO2Max).<br><br>
-            <strong>Exemplo de progressão nos tiros:</strong> Semana 1 = 6x400m | Semana 2 = 7x400m | Semana 3 = 8x400m | Semana 4 (recup) = 4x30s.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">📊 O que a IA faz de diferente?</div>
-            <div class="faq-a">A IA (<strong>Google Gemini</strong>) não calcula os números — isso é feito por algoritmos esportivos precisos.<br><br>
-            O papel da IA é <strong>traduzir</strong> a planilha técnica em linguagem motivacional e didática:<br>
-            • Explica o <strong>objetivo</strong> de cada treino (ex: "hoje criamos base aeróbica para aguentar os tiros de quinta")<br>
-            • Dá <strong>dicas práticas</strong> (ex: "tente manter a respiração em 2 tempos")<br>
-            • Mantém o <strong>engajamento</strong> com tom pessoal e emojis.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">🔗 Como sincronizar com o Intervals.icu?</div>
-            <div class="faq-a">1. Vá em <strong>Configurações</strong> e preencha sua <strong>API Key</strong> e <strong>Athlete ID</strong> (encontrados em Settings > Developer Settings no Intervals.icu).<br>
-            2. Após gerar um plano, clique em <strong>"Sincronizar"</strong> ao lado dele na aba Planos.<br>
-            3. O sistema limpa seus treinos futuros e insere o novo plano automaticamente.<br>
-            4. Abra seu relógio Garmin e sincronize — os treinos aparecem no calendário!<br><br>
-            💡 <strong>Dica:</strong> use o botão "Sincronizar do Intervals.icu" no Dashboard para importar atividades em tempo real sem precisar de arquivo.
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">🌱 Como funciona o Plano Iniciante?</div>
-            <div class="faq-a">Para quem está começando, o sistema <strong>não precisa de dados históricos</strong>. Ele cria um plano progressivo de <strong>caminhada alternada com trote leve</strong>.<br><br>
-            • <strong>Semana 1:</strong> 25 min alternando 1min trote / 2min caminhada<br>
-            • <strong>Semana 2:</strong> 30 min com 2min trote / 1min caminhada<br>
-            • <strong>Semana 3:</strong> 35 min de trote contínuo leve<br>
-            • <strong>Semana 4 (recup):</strong> 30 min leve<br><br>
-            O número de dias por semana é personalizável (recomendado: 3x/semana).
-            </div>
-          </div>
-
-          <div class="faq-item" onclick="this.classList.toggle('open')">
-            <div class="faq-q">💬 Como funciona o Chat com IA?</div>
-            <div class="faq-a">Clique no botão 💬 no canto inferior direito para abrir o assistente virtual.<br><br>
-            Você pode perguntar sobre:<br>
-            • Dúvidas sobre treinos e periodização<br>
-            • Como usar o sistema<br>
-            • Significado das zonas de treino<br>
-            • Dicas de corrida<br><br>
-            O assistente usa IA (Gemini) para responder de forma natural e em português.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Configurações -->
-      <div id="settings" class="hidden">
-        <div class="card"><h2>⚙️ Configurações</h2>
-          <h3 style="color:#38bdf8; font-size:0.95rem; margin-bottom:12px">🔗 Intervals.icu</h3>
-          <div class="form-group"><label>Intervals API Key</label><input type="text" id="set-api-key"></div>
-          <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id"></div>
-
-          <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">🏃 Strava</h3>
-          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Conecte sua conta Strava para importar atividades automaticamente.</p>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px">
-            <div class="form-group" style="margin-bottom:0"><label>Strava Client ID</label><input type="text" id="set-strava-id"></div>
-            <div class="form-group" style="margin-bottom:0"><label>Strava Client Secret</label><input type="password" id="set-strava-secret"></div>
-          </div>
-          <div class="form-group"><label>Strava Refresh Token</label>
-            <div style="display:flex; gap:8px">
-              <input type="text" id="set-strava-refresh" style="flex:1">
-              <button class="btn btn-outline" style="padding:6px 12px; font-size:0.75rem; white-space:nowrap" onclick="connectStrava()">🔗 Conectar</button>
-            </div>
-          </div>
-
-          <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">📂 Importar CSV do Strava</h3>
-          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Baixe seus dados em <a href="https://www.strava.com/athlete/export" target="_blank" style="color:#38bdf8">strava.com/athlete/export</a> e faça upload do arquivo activities.csv.</p>
-          <input type="file" id="strava-csv-input" accept=".csv" style="width:100%; padding:20px; border:2px dashed rgba(51,65,85,0.5); border-radius:8px; color:#94a3b8; cursor:pointer; background:rgba(15,23,42,0.4)">
-          <button class="btn btn-primary" style="margin-top:12px" onclick="uploadStravaCSV()">📊 Importar CSV</button>
-
-          <button class="btn btn-success" style="margin-top:20px; width:100%" onclick="saveSettings()">💾 Salvar Configurações</button>
-          <div id="settings-result" style="margin-top:12px"></div>
+        <div id="dashboard-content">
+          <p style="color:var(--text-muted)">Clique em "Sincronizar" para buscar suas atividades recentes do Intervals.icu.</p>
         </div>
       </div>
     </div>
-  </div>
 
+    <!-- ==================== UPLOAD ==================== -->
+    <div id="upload" class="container hidden">
+      <div class="section-title">📁 Upload e Importação</div>
+
+      <!-- Quick entry cards -->
+      <div class="quick-actions">
+        <div class="quick-card">
+          <h3>✍️ Adicionar Corrida Manual</h3>
+          <div class="form-group" style="margin-bottom:4px"><label style="font-size:0.7rem">Data</label><input type="date" id="manual-date" style="font-size:0.78rem; padding:6px 8px"></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+            <div class="form-group" style="margin-bottom:4px"><label style="font-size:0.7rem">Distância (km)</label><input type="number" id="manual-dist" step="0.01" style="font-size:0.78rem; padding:6px"></div>
+            <div class="form-group" style="margin-bottom:4px"><label style="font-size:0.7rem">Duração (min)</label><input type="number" id="manual-min" step="0.5" style="font-size:0.78rem; padding:6px"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+            <div class="form-group" style="margin-bottom:4px"><label style="font-size:0.7rem">FC média</label><input type="number" id="manual-hr" style="font-size:0.78rem; padding:6px"></div>
+            <div class="form-group" style="margin-bottom:4px"><label style="font-size:0.7rem">Anotações</label><input type="text" id="manual-notes" placeholder="ex: Treino leve" style="font-size:0.78rem; padding:6px"></div>
+          </div>
+          <button class="btn btn-primary" onclick="addManualActivity()">➕ Adicionar Corrida</button>
+          <div id="manual-result" style="margin-top:6px; font-size:0.8rem"></div>
+        </div>
+        <div class="quick-card">
+          <h3>🔗 Importar Link do Strava</h3>
+          <p style="color:var(--text-muted); font-size:0.72rem; margin-bottom:8px">Cole o link de qualquer atividade do Strava</p>
+          <div class="form-group" style="margin-bottom:6px"><input type="text" id="strava-link" placeholder="https://www.strava.com/activities/..." style="font-size:0.78rem; padding:6px"></div>
+          <button class="btn btn-primary" onclick="importStravaLink()">📥 Importar</button>
+          <div id="strava-link-result" style="margin-top:6px; font-size:0.8rem"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📁 Upload de Planilha (Intervals.icu)</h2>
+        <p style="color:var(--text-muted); margin-bottom:12px; font-size:0.88rem">Envie seu arquivo .xlsx exportado do Intervals.icu para análise completa e geração de plano personalizado.</p>
+        <input type="file" id="file-input" accept=".xlsx,.xls" style="width:100%; padding:20px; border:2px dashed var(--border-light); border-radius:8px; color:var(--text-muted); cursor:pointer; background:rgba(15,23,42,0.4)">
+        <button class="btn btn-primary" style="margin-top:12px" onclick="uploadFile()">📊 Analisar Dados</button>
+        <div id="upload-result" style="margin-top:12px"></div>
+      </div>
+      <div class="card" id="gen-plan-card" style="display:none">
+        <h2>🏗️ Gerar Plano a partir dos Dados</h2>
+        <div class="grid">
+          <div class="form-group"><label>Nome do Plano</label><input type="text" id="gen-name" value="Plano Baseado em Dados"></div>
+          <div class="form-group"><label>Meta 5K (min)</label><input type="number" id="gen-target" value="19" step="0.5" min="12" max="60"></div>
+          <div class="form-group"><label>Semanas</label><input type="number" id="gen-weeks" value="4" min="1" max="52"></div>
+        </div>
+        <button class="btn btn-success" onclick="generatePlan()">✨ Gerar Plano + IA</button>
+        <div id="gen-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ==================== INICIANTE ==================== -->
+    <div id="zeroplane" class="container hidden">
+      <div class="section-title">🌱 Plano Iniciante</div>
+      <div class="card">
+        <p style="color:var(--text-muted); margin-bottom:16px; font-size:0.9rem">Sem dados de treino? Comece com um plano progressivo de caminhada e trote leve, totalmente adaptado para iniciantes.</p>
+        <div class="grid">
+          <div class="form-group"><label>Nome do Plano</label><input type="text" id="zp-name" value="Meu Plano Iniciante"></div>
+          <div class="form-group"><label>Dias por semana</label><input type="number" id="zp-days" value="3" min="2" max="5"></div>
+          <div class="form-group"><label>Duração (semanas)</label><input type="number" id="zp-weeks" value="4" min="2" max="12"></div>
+        </div>
+        <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Plano Iniciante</button>
+        <div id="zp-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ==================== PLANO POR META ==================== -->
+    <div id="meta" class="container hidden">
+      <div class="section-title">🎯 Plano por Meta</div>
+      <div class="card">
+        <p style="color:var(--text-muted); margin-bottom:16px; font-size:0.9rem">Crie um plano personalizado para sua próxima prova! Escolha a distância, seu tempo alvo e a data da prova.</p>
+        <div class="grid">
+          <div class="form-group"><label>Nome do Plano</label><input type="text" id="goal-name" value="Plano para Prova"></div>
+          <div class="form-group"><label>Distância</label><select id="goal-dist">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="21.1">21 km (Meia Maratona)</option>
+            <option value="42.2">42 km (Maratona)</option>
+          </select></div>
+          <div class="form-group"><label>Tempo Alvo (minutos)</label><input type="number" id="goal-time" placeholder="ex: 25 para 5km" min="1"></div>
+          <div class="form-group"><label>Data da Prova</label><input type="date" id="goal-date"></div>
+        </div>
+        <button class="btn btn-success" onclick="generateGoalPlan()">🎯 Gerar Plano</button>
+        <div id="goal-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ==================== PLANOS ==================== -->
+    <div id="plans" class="container hidden">
+      <div class="section-title">📅 Meus Planos</div>
+      <div class="card"><div id="plans-list">Carregando...</div></div>
+    </div>
+
+    <!-- ==================== DETALHES DO PLANO ==================== -->
+    <div id="plan-detail" class="container hidden">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <h2 id="pd-title" style="margin:0">📋 Detalhes do Plano</h2>
+        <button class="btn btn-outline" onclick="closePlanDetail()">✕ Fechar</button>
+      </div>
+      <div class="card">
+        <div id="pd-progress"></div>
+        <div id="pd-summary"></div>
+        <div id="pd-advance"></div>
+        <div id="pd-workouts" style="max-height:500px; overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- ==================== FAQ ==================== -->
+    <div id="faq" class="container hidden">
+      <div class="section-title">❓ FAQ</div>
+      <div class="card"><h2>Como funciona o sistema?</h2>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">📊 O que tem no Dashboard?</div>
+          <div class="faq-a">O Dashboard reúne tudo que você precisa pra acompanhar sua evolução:<br><br>
+          • <strong>Última Atividade:</strong> mostra a corrida mais recente importada, com distância, ritmo e duração.<br>
+          • <strong>Planejado vs Realizado:</strong> compara o último treino do seu plano com o que você realmente fez.<br>
+          • <strong>Próximo Treino:</strong> prévia do próximo treino agendado no seu plano ativo (apenas semanas liberadas).<br>
+          • <strong>Nível de Confiança:</strong> velocímetro de 0 a 100 baseado na sua consistência (frequência e volume dos últimos 30 dias).<br>
+          • <strong>Meta Ativa:</strong> se você criou um Plano por Meta, ele aparece aqui com distância, ritmo alvo e data da prova.
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🔄 Como funciona a sincronia com o Intervals.icu?</div>
+          <div class="faq-a">No Dashboard, clique em <strong>"Sincronizar do Intervals.icu"</strong> e o sistema busca automaticamente suas atividades recentes (últimos 30 dias) usando sua API Key.<br><br>
+          Pré-requisito: API Key e Athlete ID configurados em ⚙️ Configurações.
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🎯 Como criar um Plano por Meta?</div>
+          <div class="faq-a">Na seção <strong>TREINO > Plano por Meta</strong> você pode criar um plano para 5km, 10km, 21km (Meia) ou 42km (Maratona).<br><br>
+          <strong>Passo a passo:</strong><br>
+          1. Escolha a distância<br>
+          2. Defina seu tempo alvo<br>
+          3. Selecione a data da prova<br>
+          4. Clique em "Gerar Plano"<br><br>
+          O sistema calcula duração ideal (12-52 semanas), 4 fases de periodização e zonas de treino baseadas no pace alvo.
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">📈 Como funciona o Nível de Confiança?</div>
+          <div class="faq-a">O velocímetro de confiança (0-100%) avalia suas chances com base nos <strong>últimos 30 dias</strong>:<br><br>
+          • <strong>Frequência (0-40 pts):</strong> quantas corridas no mês (ideal: 12+)<br>
+          • <strong>Volume (0-40 pts):</strong> média semanal em km (ideal: 25km+)<br>
+          • <strong>Consistência (0-20 pts):</strong> semanas treinando regularmente<br><br>
+          🔴 0-39: Baixo | 🟡 40-69: Médio | 🟢 70-100: Alto
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">📐 Como as zonas de treino são calculadas?</div>
+          <div class="faq-a">Baseadas no seu melhor 5K ou pace alvo:<br>
+          • 🟢 <strong>Easy (Z2):</strong> 120-150% do pace 5K<br>
+          • 🟡 <strong>Marathon:</strong> 110-125%<br>
+          • 🟠 <strong>Threshold (Z4):</strong> 95-105%<br>
+          • 🔴 <strong>VO2Max:</strong> 90-95%<br>
+          • ⚡ <strong>Speed:</strong> 85-90%<br><br>
+          Ex: 5K em 20min (4:00/km) → Threshold ~4:00-4:12/km, Easy ~5:20-6:00/km.
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🔄 Como funciona o avanço semanal e adaptação?</div>
+          <div class="faq-a">O plano mostra <strong>apenas a semana atual</strong>. Você conclui a semana e clica em <strong>"Concluir Semana e Avançar"</strong>.<br><br>
+          <strong>Adaptação automática:</strong><br>
+          • 🟢 <strong>80%+ concluído:</strong> volume +5%<br>
+          • 🟡 <strong>60-80%:</strong> progressão normal<br>
+          • 🟠 <strong>40-60%:</strong> progressão suave<br>
+          • 🔴 <strong>&lt;40%:</strong> a semana se repete<br><br>
+          As atividades são detectadas automaticamente via sincronia Intervals, entrada manual ou importação Strava.
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🤖 O que a IA faz?</div>
+          <div class="faq-a">A IA (Gemini) <strong>não calcula os números</strong> — isso é feito por algoritmos esportivos. O papel da IA é motivar e explicar cada treino em linguagem acessível!<br><br>
+          • Explica o objetivo de cada treino<br>
+          • Dá dicas práticas de execução<br>
+          • Mantém o engajamento com tom pessoal
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🔗 Como sincronizar planos com o relógio?</div>
+          <div class="faq-a">1. Configure API Key e Athlete ID em ⚙️ Configurações<br>
+          2. Após gerar um plano, clique em "Sincronizar" na aba Planos<br>
+          3. O sistema insere os treinos no calendário do Intervals.icu<br>
+          4. Sincronize seu Garmin — os treinos aparecem com steps estruturados!
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">🌱 Como funciona o Plano Iniciante?</div>
+          <div class="faq-a">Em <strong>TREINO > Iniciante</strong>, sem dados necessários. O plano começa com caminhada alternada com trote leve:<br>
+          • Semana 1: 25 min (1min trote / 2min caminhada)<br>
+          • Progressão semanal de 5 min<br>
+          • Dias personalizáveis (recomendado: 3x/semana)
+          </div>
+        </div>
+        <div class="faq-item" onclick="this.classList.toggle('open')">
+          <div class="faq-q">💬 Como usar o Chat?</div>
+          <div class="faq-a">Clique no botão 💬 no canto inferior direito. Você pode perguntar sobre treinos, planos, zonas de treino, ou como usar o sistema. As opções aparecem como botões clicáveis!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== CONFIGURAÇÕES ==================== -->
+    <div id="settings" class="container hidden">
+      <div class="section-title">⚙️ Configurações</div>
+      <div class="card">
+        <h2 style="font-size:1rem">🔗 Intervals.icu</h2>
+        <div class="form-group"><label>Intervals API Key</label><input type="text" id="set-api-key" autocomplete="off" spellcheck="false"></div>
+        <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id" autocomplete="off"></div>
+
+        <h2 style="font-size:1rem; margin-top:20px">🏃 Strava</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:12px">Conecte sua conta Strava para importar atividades automaticamente.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px">
+          <div class="form-group" style="margin-bottom:0"><label>Strava Client ID</label><input type="text" id="set-strava-id" autocomplete="off"></div>
+          <div class="form-group" style="margin-bottom:0"><label>Strava Client Secret</label><input type="password" id="set-strava-secret" autocomplete="off"></div>
+        </div>
+        <div class="form-group"><label>Strava Refresh Token</label>
+          <div style="display:flex; gap:8px">
+            <input type="text" id="set-strava-refresh" style="flex:1" autocomplete="off">
+            <button class="btn btn-outline" style="padding:6px 12px; font-size:0.75rem; white-space:nowrap" onclick="connectStrava()">🔗 Conectar</button>
+          </div>
+        </div>
+
+        <h2 style="font-size:1rem; margin-top:20px">📂 Importar CSV do Strava</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:12px">Baixe seus dados em <a href="https://www.strava.com/athlete/export" target="_blank" rel="noopener" style="color:var(--accent)">strava.com/athlete/export</a> e faça upload do <code>activities.csv</code>.</p>
+        <input type="file" id="strava-csv-input" accept=".csv" style="width:100%; padding:20px; border:2px dashed var(--border-light); border-radius:8px; color:var(--text-muted); cursor:pointer; background:rgba(15,23,42,0.4)">
+        <button class="btn btn-primary" style="margin-top:12px" onclick="uploadStravaCSV()">📊 Importar CSV</button>
+        <button class="btn btn-success" style="margin-top:20px; width:100%" onclick="saveSettings()">💾 Salvar Configurações</button>
+        <div id="settings-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== CHAT ==================== -->
   <div class="toast" id="toast"></div>
-
-  <!-- Chat widget -->
-  <button class="chat-btn" id="chat-btn" onclick="toggleChat()">💬</button>
+  <button class="chat-btn" id="chat-btn" onclick="toggleChat()" title="Chat">💬</button>
   <div class="chat-widget" id="chat-widget">
     <div class="chat-header">
       <span>🤖 Assistente de Treino</span>
       <button class="chat-close" onclick="toggleChat()">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages">
-      <div class="chat-welcome">👋 Olá! Sou seu assistente de corrida.<br>Pergunte sobre treinos, planos ou como usar o sistema!</div>
+      <div class="chat-welcome">👋 Olá! Escolha uma opção ou digite sua dúvida!</div>
+      <div class="chat-msg ai" style="margin-top:0">
+        <button class="chat-option-btn" onclick="sendChatMessage('Quero criar um plano de treino')">🎯 Criar plano de treino</button>
+        <button class="chat-option-btn" onclick="sendChatMessage('Como funciona o dashboard?')">📊 Entender o Dashboard</button>
+        <button class="chat-option-btn" onclick="sendChatMessage('O que são zonas de treino?')">📐 Explicar zonas de treino</button>
+        <button class="chat-option-btn" onclick="sendChatMessage('Como sincronizar com Intervals?')">🔄 Sincronizar com Intervals</button>
+        <button class="chat-option-btn" onclick="sendChatMessage('Dicas para iniciantes')">🌱 Dicas para iniciantes</button>
+      </div>
     </div>
     <div class="chat-input-area">
-      <input type="text" id="chat-input" placeholder="Digite sua dúvida..." onkeydown="if(event.key==='Enter') sendChat()">
+      <input type="text" id="chat-input" placeholder="Digite sua dúvida..." onkeydown="if(event.key==='Enter') sendChat()" maxlength="500">
       <button onclick="sendChat()" id="chat-send">➤</button>
     </div>
   </div>
@@ -469,56 +646,143 @@
     let token = localStorage.getItem('token');
     let lastUploadAnalysis = null;
 
+    // ===================== HELPERS =====================
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    function sanitizeInput(v) {
+      if (typeof v !== 'string') return v;
+      return v.replace(/<[^>]*>/g, '').trim();
+    }
+
     function toast(msg, err) {
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.className = 'toast' + (err ? ' error' : '') + ' show';
-      setTimeout(() => t.classList.remove('show'), 3000);
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 3000);
     }
 
     async function api(url, method = 'GET', body = null) {
       const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
       if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
       const res = await fetch(`/api${url}`, opts);
-      if (!res.ok) throw new Error((await res.json()).error);
-      return res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro na requisição');
+      return data;
     }
 
-    function showTab(tab) {
-      document.querySelectorAll('#auth .tab').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
+    function formatPaceClient(pace) {
+      if (!pace || pace <= 0) return '0:00/km';
+      const min = Math.floor(pace / 60);
+      const sec = Math.floor(pace % 60);
+      return `${min}:${sec.toString().padStart(2, '0')}/km`;
+    }
+
+    function formatTimeClient(sec) {
+      if (!sec || sec <= 0) return '0:00';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h > 0) return `${h}h${String(m).padStart(2,'0')}m${String(s).padStart(2,'0')}s`;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    // ===================== SIDEBAR =====================
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-overlay').classList.toggle('open');
+    }
+
+    function toggleTreinoGroup() {
+      const group = document.getElementById('treino-group');
+      const arrow = document.getElementById('treino-arrow');
+      group.classList.toggle('open');
+      arrow.classList.toggle('open');
+    }
+
+    function showLoginTab(tab) {
+      document.querySelectorAll('#auth .tab').forEach(t => t.style.borderColor = 'rgba(51,65,85,0.4)');
+      document.querySelectorAll('#auth .tab').forEach(t => t.style.color = '#94a3b8');
+      event.target.style.borderColor = '#38bdf8';
+      event.target.style.color = '#38bdf8';
       document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
       document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
     }
+
     function showSection(sec) {
-      document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
-      ['dashboard','upload','zeroplane','meta','plans','faq','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
+      // Update sidebar active state
+      document.querySelectorAll('.nav-item[data-section]').forEach(i => i.classList.remove('active'));
+      const activeNav = document.querySelector(`.nav-item[data-section="${sec}"]`);
+      if (activeNav) activeNav.classList.add('active');
+
+      // Show/hide sections
+      ['dashboard','upload','zeroplane','meta','plans','plan-detail','faq','settings'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.classList.toggle('hidden', s !== sec);
+      });
+
+      // Close sidebar on mobile
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('open');
+
+      // Load data when switching to certain sections
       if (sec === 'dashboard') loadDashboard();
+      if (sec === 'plans') loadPlans();
     }
 
+    function showSectionWithId(id) {
+      showSection(id);
+    }
+
+    // ===================== AUTH =====================
+
     async function login() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      document.getElementById('login-error').textContent = '';
+      if (!email) { document.getElementById('login-error').textContent = 'Informe seu email.'; return; }
+      if (!password || password.length < 6) { document.getElementById('login-error').textContent = 'Senha deve ter pelo menos 6 caracteres.'; return; }
       try {
-        const data = await api('/auth/login', 'POST', { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
+        const data = await api('/auth/login', 'POST', { email, password });
         token = data.token; localStorage.setItem('token', token); initApp(); toast('Login realizado!');
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { document.getElementById('login-error').textContent = e.message; toast(e.message, true); }
     }
 
     async function register() {
+      const name = sanitizeInput(document.getElementById('reg-name').value);
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      document.getElementById('register-error').textContent = '';
+      if (!name || name.length < 2) { document.getElementById('register-error').textContent = 'Nome deve ter pelo menos 2 caracteres.'; return; }
+      if (!email || !email.includes('@')) { document.getElementById('register-error').textContent = 'Email inválido.'; return; }
+      if (!password || password.length < 6) { document.getElementById('register-error').textContent = 'Senha deve ter pelo menos 6 caracteres.'; return; }
       try {
-        const data = await api('/auth/register', 'POST', { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value });
+        const data = await api('/auth/register', 'POST', { name, email, password });
         token = data.token; localStorage.setItem('token', token); initApp(); toast('Conta criada!');
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { document.getElementById('register-error').textContent = e.message; toast(e.message, true); }
     }
 
-    function logout() { localStorage.removeItem('token'); location.reload(); }
+    function logout() {
+      localStorage.removeItem('token');
+      location.reload();
+    }
 
     async function initApp() {
-      if (!token) { document.getElementById('auth').classList.remove('hidden'); document.getElementById('app').classList.add('hidden'); return; }
-      document.getElementById('auth').classList.add('hidden'); document.getElementById('app').classList.remove('hidden');
+      if (!token) {
+        document.getElementById('auth').classList.remove('hidden');
+        document.querySelector('.main').style.display = 'block';
+        return;
+      }
+      document.getElementById('auth').classList.add('hidden');
       try {
         const { user } = await api('/auth/me');
-        document.getElementById('user-name').textContent = user.name;
+        document.getElementById('sidebar-user-name').textContent = user.name;
         document.getElementById('set-api-key').value = user.intervals_api_key || '';
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
         document.getElementById('set-strava-id').value = user.strava_client_id || '';
@@ -533,19 +797,23 @@
       } catch { logout(); }
     }
 
-    // Upload
+    // ===================== FILE UPLOAD =====================
+
     async function uploadFile() {
       const file = document.getElementById('file-input').files[0];
       if (!file) return toast('Selecione um arquivo .xlsx', true);
+      // Validate extension server-side will catch it, but let's add client check too
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['xlsx', 'xls'].includes(ext)) return toast('Formato inválido. Use .xlsx', true);
       const form = new FormData();
       form.append('file', file);
-      document.getElementById('upload-result').innerHTML = '<div style="color:#38bdf8">Analisando...</div>';
+      document.getElementById('upload-result').innerHTML = '<div style="color:var(--accent)">Analisando...</div>';
       try {
         const res = await fetch('/api/data/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form });
         const data = await res.json();
         if (!res.ok) return toast(data.error, true);
         lastUploadAnalysis = data.analysis;
-        let html = `<div class="summary-box">✅ ${data.message}</div><div class="stat-detailed">`;
+        let html = `<div class="summary-box">✅ ${escapeHtml(data.message)}</div><div class="stat-detailed">`;
         html += `<div><div class="val">${data.analysis.totalRuns}</div><div class="lbl">Corridas</div></div>`;
         html += `<div><div class="val">${data.analysis.totalDist} km</div><div class="lbl">Distância</div></div>`;
         if (data.analysis.best5k) html += `<div><div class="val">${Math.floor(data.analysis.best5k.time/60)}:${String(Math.round(data.analysis.best5k.time%60)).padStart(2,'0')}</div><div class="lbl">Melhor 5K</div></div>`;
@@ -558,59 +826,139 @@
     }
 
     async function generatePlan() {
-      document.getElementById('gen-result').innerHTML = '<div style="color:#38bdf8">Gerando plano personalizado com IA...</div>';
+      document.getElementById('gen-result').innerHTML = '<div style="color:var(--accent)">Gerando plano com IA...</div>';
       try {
-        const res = await api('/data/generate-plan', 'POST', { planName: document.getElementById('gen-name').value, target5kMin: parseFloat(document.getElementById('gen-target').value), weeks: parseInt(document.getElementById('gen-weeks').value) });
+        const res = await api('/data/generate-plan', 'POST', {
+          planName: sanitizeInput(document.getElementById('gen-name').value) || 'Meu Plano',
+          target5kMin: Math.max(12, Math.min(60, parseFloat(document.getElementById('gen-target').value) || 19)),
+          weeks: Math.max(1, Math.min(52, parseInt(document.getElementById('gen-weeks').value) || 4))
+        });
         showPlanPreview(res);
         loadPlans();
-        toast('Plano gerado com sucesso!');
-      } catch (e) { toast(e.message, true); }
-    }
-
-    async function generateZeroPlan() {
-      document.getElementById('zp-result').innerHTML = '<div style="color:#38bdf8">Gerando plano iniciante com IA...</div>';
-      try {
-        const res = await api('/data/generate-zero-plan', 'POST', { planName: document.getElementById('zp-name').value, weeks: parseInt(document.getElementById('zp-weeks').value), daysPerWeek: parseInt(document.getElementById('zp-days').value) });
-        showPlanPreview(res);
-        loadPlans();
-        toast('Plano criado!');
+        toast('Plano gerado!');
       } catch (e) { toast(e.message, true); }
     }
 
     function showPlanPreview(res) {
       const preview = document.createElement('div');
-      preview.innerHTML = `<div class="summary-box">✅ ${res.message} — ${res.sessions} sessões em ${res.weeks} semanas</div>`;
+      preview.innerHTML = `<div class="summary-box">✅ ${escapeHtml(res.message)} — ${res.sessions} sessões em ${res.weeks} semanas</div>`;
       preview.innerHTML += '<div style="max-height:300px; overflow-y:auto; margin-top:10px">';
-      res.plan.slice(0, 14).forEach(p => {
-        preview.innerHTML += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">IA</span></div><div class="desc">${p.description.substring(0,80)}...</div></div>`;
+      (res.plan || []).slice(0, 14).forEach(p => {
+        preview.innerHTML += `<div class="plan-item"><div class="name">${escapeHtml(p.name)} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">IA</span></div><div class="desc">${escapeHtml((p.description||'').substring(0,80))}...</div></div>`;
       });
       preview.innerHTML += '</div>';
       const activeResult = document.getElementById('gen-result');
       if (activeResult) { activeResult.innerHTML = ''; activeResult.appendChild(preview); }
     }
 
+    // ===================== MANUAL ACTIVITY =====================
+
+    async function addManualActivity() {
+      const date = document.getElementById('manual-date').value;
+      const dist = parseFloat(document.getElementById('manual-dist').value);
+      const min = parseFloat(document.getElementById('manual-min').value) || 0;
+      const hr = parseInt(document.getElementById('manual-hr').value) || 0;
+      const notes = sanitizeInput(document.getElementById('manual-notes').value);
+
+      if (!date) return toast('Selecione a data!', true);
+      if (!dist || dist <= 0) return toast('Informe a distância!', true);
+      if (min <= 0) return toast('Informe a duração!', true);
+
+      document.getElementById('manual-result').innerHTML = '<div style="color:var(--accent); font-size:0.8rem">Registrando...</div>';
+      try {
+        const res = await api('/data/manual-activity', 'POST', {
+          date, distanceKm: dist, minutes: Math.floor(min),
+          seconds: Math.round((min % 1) * 60), heartRate: hr || null, notes
+        });
+        document.getElementById('manual-result').innerHTML = `<div style="color:var(--success); font-size:0.8rem">✅ ${escapeHtml(res.message)}</div>`;
+        toast('Corrida registrada!');
+        if (document.getElementById('dashboard').classList.contains('hidden') === false) loadDashboard();
+        document.getElementById('manual-dist').value = '';
+        document.getElementById('manual-min').value = '';
+        document.getElementById('manual-hr').value = '';
+        document.getElementById('manual-notes').value = '';
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== STRAVA LINK =====================
+
+    async function importStravaLink() {
+      const url = document.getElementById('strava-link').value.trim();
+      if (!url) return toast('Cole o link da atividade do Strava', true);
+      document.getElementById('strava-link-result').innerHTML = '<div style="color:var(--accent); font-size:0.8rem">Importando...</div>';
+      try {
+        const res = await api('/data/strava-import-link', 'POST', { url });
+        if (res.manual) {
+          document.getElementById('strava-link-result').innerHTML =
+            `<div style="color:var(--warning); font-size:0.8rem">${escapeHtml(res.message)}<br>${escapeHtml(res.hint)}</div>`;
+        } else {
+          document.getElementById('strava-link-result').innerHTML =
+            `<div style="color:var(--success); font-size:0.8rem">✅ ${escapeHtml(res.message)}</div>`;
+          toast('Atividade importada do Strava!');
+          if (document.getElementById('dashboard').classList.contains('hidden') === false) loadDashboard();
+          document.getElementById('strava-link').value = '';
+        }
+      } catch (e) {
+        document.getElementById('strava-link-result').innerHTML =
+          `<div style="color:var(--danger); font-size:0.8rem">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    // ===================== ZERO PLAN =====================
+
+    async function generateZeroPlan() {
+      document.getElementById('zp-result').innerHTML = '<div style="color:var(--accent)">Gerando plano iniciante...</div>';
+      try {
+        const res = await api('/data/generate-zero-plan', 'POST', {
+          planName: sanitizeInput(document.getElementById('zp-name').value) || 'Plano Iniciante',
+          weeks: Math.max(2, Math.min(12, parseInt(document.getElementById('zp-weeks').value) || 4)),
+          daysPerWeek: Math.max(2, Math.min(5, parseInt(document.getElementById('zp-days').value) || 3))
+        });
+        showPlanPreview(res);
+        loadPlans();
+        toast('Plano iniciante criado!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== PLANS LIST =====================
+
     async function loadPlans() {
       const list = document.getElementById('plans-list');
       try {
         const res = await api('/data/plans');
         list.innerHTML = '';
-        if (res.plans.length === 0) { list.innerHTML = '<p style="color:#94a3b8">Nenhum plano salvo ainda. Vá em "Upload" ou "Iniciante" para criar um!</p>'; return; }
+        if (res.plans.length === 0) {
+          list.innerHTML = '<p style="color:var(--text-muted)">Nenhum plano salvo ainda. Crie um em TREINO > Iniciante ou TREINO > Plano por Meta!</p>';
+          return;
+        }
         res.plans.forEach(p => {
           const pData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
           const sessions = pData.plan ? pData.plan.length : 0;
-          let worksoutsPreview = '';
+          const currentWeek = p.current_week || 1;
+          const totalWeeks = p.weeks || Math.max(1, Math.ceil(sessions / 7)) || 1;
+          const weekPct = Math.round((currentWeek / totalWeeks) * 100);
+          let workoutsPreview = '';
           if (pData.plan) {
-            const first7 = pData.plan.slice(0, 7);
-            worksoutsPreview = first7.map(w => `<div style="font-size:0.78rem; color:#94a3b8; padding:2px 0">${w.name} ${w.moving_time > 0 ? '— '+Math.round(w.moving_time/60)+'min' : ''}</div>`).join('');
+            const first5 = pData.plan.slice(0, 5);
+            workoutsPreview = first5.map(w =>
+              `<div style="font-size:0.78rem; color:var(--text-muted); padding:2px 0">${escapeHtml(w.name)} ${w.moving_time > 0 ? '— '+Math.round(w.moving_time/60)+'min' : ''}</div>`
+            ).join('');
           }
           list.innerHTML += `
-            <div class="plan-item" style="border-left-color: ${p.synced ? '#22c55e' : '#38bdf8'}">
-              <div class="name">📋 ${p.plan_name || 'Sem nome'} <span style="font-size:0.8rem; color:#94a3b8">(${p.weeks} sem • ${sessions} treinos) ${p.synced ? '✅ Sincronizado' : '⏳ Pendente'}</span></div>
-              <div class="desc" style="font-size:0.8rem; color:#64748b">Criado em ${new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
-              ${worksoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(30,41,59,0.6)">' + worksoutsPreview + '</div>' : ''}
+            <div class="plan-item" style="border-left-color: ${p.synced ? 'var(--success)' : 'var(--accent)'}">
+              <div class="name">📋 ${escapeHtml(p.plan_name || 'Sem nome')} <span style="font-size:0.8rem; color:var(--text-muted)">(${p.weeks} sem • ${sessions} treinos) ${p.synced ? '✅ Sincronizado' : '⏳ Pendente'}</span></div>
+              <div class="desc" style="font-size:0.8rem; color:var(--text-dim)">Criado em ${new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
+              <div style="display:flex; align-items:center; gap:8px; margin:6px 0; font-size:0.78rem">
+                <span style="color:var(--accent); font-weight:600">Semana ${currentWeek}/${totalWeeks}</span>
+                <div style="flex:1; height:6px; background:rgba(51,65,85,0.5); border-radius:3px; overflow:hidden">
+                  <div style="height:100%; width:${weekPct}%; background:linear-gradient(90deg, var(--accent), var(--success)); border-radius:3px"></div>
+                </div>
+                <span style="color:var(--text-muted)">${weekPct}%</span>
+              </div>
+              ${workoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(30,41,59,0.6)">' + workoutsPreview + '</div>' : ''}
               <div class="actions">
-                <button class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">🔄 Sincronizar</button>
-                <button class="btn btn-primary" style="padding:4px 10px; font-size:0.8rem" onclick="showPlanDetail(${p.id})">📋 Ver Detalhes</button>
+                <button class="btn btn-outline" style="padding:4px 10px; font-size:0.78rem" onclick="syncPlan(${p.id})">🔄 Sincronizar</button>
+                <button class="btn btn-primary" style="padding:4px 10px; font-size:0.78rem" onclick="showPlanDetail(${p.id})">📋 Ver Detalhes</button>
                 <button class="btn btn-danger" onclick="deletePlan(${p.id})">🗑️ Excluir</button>
               </div>
             </div>`;
@@ -632,297 +980,31 @@
         await api('/data/plan/' + id, 'DELETE');
         toast('Plano excluído');
         loadPlans();
+        // If we're on plan detail, go back
+        if (!document.getElementById('plan-detail').classList.contains('hidden')) showSection('plans');
       } catch (e) { toast(e.message, true); }
     }
 
-    async function saveSettings() {
-      try {
-        await api('/auth/settings', 'PUT', {
-          intervals_api_key: document.getElementById('set-api-key').value,
-          intervals_athlete_id: document.getElementById('set-athlete-id').value,
-          strava_client_id: document.getElementById('set-strava-id').value,
-          strava_client_secret: document.getElementById('set-strava-secret').value,
-          strava_refresh_token: document.getElementById('set-strava-refresh').value,
-        });
-        toast('Configurações salvas!');
-      } catch (e) { toast(e.message, true); }
-    }
-
-    // ===================== DASHBOARD =====================
-
-    async function loadDashboard() {
-      const container = document.getElementById('dashboard-content');
-      container.innerHTML = '<div style="color:#38bdf8">Carregando painel...</div>';
-      try {
-        const res = await api('/data/dashboard');
-        let html = '';
-
-        // Última atividade
-        html += '<div style="margin-bottom:20px">';
-        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Última Atividade Importada</h3>';
-        if (res.lastActivity) {
-          const pace = res.lastActivity.pace ? formatPaceClient(res.lastActivity.pace) : '—';
-          const dist = res.lastActivity.distance ? (res.lastActivity.distance / 1000).toFixed(2) : '0';
-          const time = res.lastActivity.time ? Math.round(res.lastActivity.time / 60) + 'min' : '—';
-          html += `<div class="stat-detailed">
-            <div><div class="val">${dist} km</div><div class="lbl">Distância</div></div>
-            <div><div class="val">${pace}</div><div class="lbl">Ritmo</div></div>
-            <div><div class="val">${time}</div><div class="lbl">Duração</div></div>
-            <div><div class="val">${new Date(res.lastActivity.date).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>
-          </div>`;
-          if (res.lastActivitySummary) {
-            html += `<div class="summary-box">📝 ${res.lastActivitySummary.summary}</div>`;
-          }
-        } else {
-          html += '<p style="color:#94a3b8">Nenhuma atividade importada. Sincronize do Intervals.icu primeiro.</p>';
-        }
-        html += '</div>';
-
-        // Planejado vs Realizado
-        html += '<div style="margin-bottom:20px">';
-        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Planejado vs Realizado</h3>';
-        if (res.plannedVsActual && res.plannedVsActual.completed) {
-          html += `<div class="stat-detailed">
-            <div><div class="val" style="color:#fbbf24">${res.plannedVsActual.planned.name}</div><div class="lbl">Planejado</div></div>
-            <div><div class="val" style="color:#22c55e">${(res.plannedVsActual.actual.distance / 1000).toFixed(2)} km</div><div class="lbl">Realizado</div></div>
-          </div>`;
-        } else {
-          html += '<p style="color:#94a3b8">Sem comparativo disponível (nenhum treino realizado vs planejado).</p>';
-        }
-        html += '</div>';
-
-        // Próximo treino
-        html += '<div style="margin-bottom:20px">';
-        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Próximo Treino</h3>';
-        if (res.nextWorkout) {
-          html += `<div class="plan-item">
-            <div class="name">${res.nextWorkout.name}</div>
-            <div class="desc">📅 ${new Date(res.nextWorkout.date).toLocaleDateString('pt-BR')} — ${res.nextWorkout.description}</div>
-          </div>`;
-        } else {
-          html += '<p style="color:#94a3b8">Nenhum plano ativo. Crie um plano em "Upload", "Iniciante" ou "Plano por Meta".</p>';
-        }
-        html += '</div>';
-
-        // Velocímetro de Confiança
-        html += '<div style="margin-bottom:10px">';
-        html += '<h3 style="color:#38bdf8; margin-bottom:10px">📈 Nível de Confiança</h3>';
-        const conf = res.confidence || 0;
-        const confColor = conf < 40 ? '#ef4444' : conf < 70 ? '#fbbf24' : '#22c55e';
-        html += `<div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px; text-align:center">
-          <div style="position:relative; display:inline-block; width:160px; height:160px; margin:0 auto">
-            <svg viewBox="0 0 100 100" style="transform:rotate(-90deg); width:160px; height:160px">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(30,41,59,0.6)" stroke-width="8"/>
-              <circle cx="50" cy="50" r="42" fill="none" stroke="${confColor}" stroke-width="8"
-                stroke-dasharray="264" stroke-dashoffset="${264 - (264 * conf / 100)}" stroke-linecap="round"
-                style="transition: stroke-dashoffset 0.8s"/>
-            </svg>
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)">
-              <div style="font-size:2.5rem; font-weight:700; color:${confColor}">${conf}</div>
-              <div style="font-size:0.8rem; color:#94a3b8">/ 100</div>
-            </div>
-          </div>
-          <p style="color:#94a3b8; margin-top:8px; font-size:0.85rem">
-            ${conf < 40 ? '🔴 Baixo — você precisa treinar com mais consistência' : conf < 70 ? '🟡 Médio — está no caminho, continue evoluindo' : '🟢 Alto — ótima consistência! Vai conseguir bater sua meta!'}
-          </p>
-          <p style="color:#64748b; font-size:0.75rem; margin-top:4px">Baseado em ${res.recentActivityCount} atividades nos últimos 30 dias</p>
-        </div>`;
-        html += '</div>';
-
-        // Meta ativa
-        if (res.goalPlan) {
-          html += '<div style="margin-bottom:10px">';
-          html += `<h3 style="color:#38bdf8; margin-bottom:10px">🎯 Meta Ativa: ${res.goalPlan.plan_name}</h3>`;
-          const gp = res.goalPlan;
-          const targetDate = new Date(gp.target_date).toLocaleDateString('pt-BR');
-          html += `<div class="stat-detailed">
-            <div><div class="val">${gp.distance_km}km</div><div class="lbl">Distância</div></div>
-            <div><div class="val">${formatPaceClient(gp.target_pace)}</div><div class="lbl">Ritmo Alvo</div></div>
-            <div><div class="val">${targetDate}</div><div class="lbl">Data da Prova</div></div>
-            <div><div class="val">${gp.weeks} sem</div><div class="lbl">Duração</div></div>
-          </div>`;
-          html += '</div>';
-        }
-
-        container.innerHTML = html;
-      } catch (e) {
-        container.innerHTML = '<p style="color:#ef4444">Erro ao carregar painel: ' + e.message + '</p>';
-      }
-    }
-
-    async function syncActivities() {
-      try {
-        const res = await api('/data/sync-activities', 'POST', { days: 30 });
-        toast(`${res.total} atividades importadas do Intervals.icu!`);
-        loadDashboard();
-      } catch (e) { toast(e.message, true); }
-    }
-
-    // ===================== MANUAL ACTIVITY =====================
-
-    async function addManualActivity() {
-      const date = document.getElementById('manual-date').value;
-      const dist = parseFloat(document.getElementById('manual-dist').value);
-      const min = parseFloat(document.getElementById('manual-min').value) || 0;
-      const hr = parseInt(document.getElementById('manual-hr').value) || 0;
-      const notes = document.getElementById('manual-notes').value;
-
-      if (!date) return toast('Selecione a data!', true);
-      if (!dist || dist <= 0) return toast('Informe a distância!', true);
-      if (min <= 0) return toast('Informe a duração!', true);
-
-      document.getElementById('manual-result').innerHTML = '<div style="color:#38bdf8; font-size:0.8rem">Registrando...</div>';
-      try {
-        const res = await api('/data/manual-activity', 'POST', { date, distanceKm: dist, minutes: Math.floor(min), seconds: Math.round((min % 1) * 60), heartRate: hr || null, notes });
-        document.getElementById('manual-result').innerHTML = `<div style="color:#22c55e; font-size:0.8rem">✅ ${res.message}</div>`;
-        toast('Corrida registrada!');
-        loadDashboard();
-        // Limpa campos
-        document.getElementById('manual-dist').value = '';
-        document.getElementById('manual-min').value = '';
-        document.getElementById('manual-hr').value = '';
-        document.getElementById('manual-notes').value = '';
-      } catch (e) { toast(e.message, true); }
-    }
-
-    // ===================== STRAVA LINK =====================
-
-    async function importStravaLink() {
-      const url = document.getElementById('strava-link').value.trim();
-      if (!url) return toast('Cole o link da atividade do Strava', true);
-
-      document.getElementById('strava-link-result').innerHTML = '<div style="color:#38bdf8; font-size:0.8rem">Importando...</div>';
-      try {
-        const res = await api('/data/strava-import-link', 'POST', { url });
-        if (res.manual) {
-          // Sem API configurada - mostra hint
-          document.getElementById('strava-link-result').innerHTML =
-            `<div style="color:#fbbf24; font-size:0.8rem">${res.message}<br>${res.hint}</div>`;
-        } else {
-          document.getElementById('strava-link-result').innerHTML =
-            `<div style="color:#22c55e; font-size:0.8rem">✅ ${res.message}</div>`;
-          toast('Atividade importada do Strava!');
-          loadDashboard();
-          document.getElementById('strava-link').value = '';
-        }
-      } catch (e) {
-        document.getElementById('strava-link-result').innerHTML =
-          `<div style="color:#ef4444; font-size:0.8rem">${e.message}</div>`;
-      }
-    }
-
-    // ===================== STRAVA CONNECT =====================
-
-    async function connectStrava() {
-      try {
-        const res = await api('/auth/strava/connect');
-        if (res.url) {
-          window.open(res.url, 'strava_auth', 'width=600,height=700');
-          // Escuta retorno
-          window.addEventListener('message', (e) => {
-            if (e.data === 'strava_connected') {
-              toast('✅ Strava conectado!');
-              loadDashboard();
-            }
-          });
-        }
-      } catch (e) { toast(e.message, true); }
-    }
-
-    function formatPaceClient(pace) {
-      if (!pace || pace <= 0) return '0:00';
-      const min = Math.floor(pace / 60);
-      const sec = Math.floor(pace % 60);
-      return `${min}:${sec.toString().padStart(2, '0')}/km`;
-    }
-
-    // ===================== GOAL PLAN =====================
-
-    async function generateGoalPlan() {
-      document.getElementById('goal-result').innerHTML = '<div style="color:#38bdf8">Gerando plano personalizado para sua meta...</div>';
-      try {
-        const dist = parseFloat(document.getElementById('goal-dist').value);
-        const timeMin = parseFloat(document.getElementById('goal-time').value);
-        const targetTimeSeconds = timeMin * 60;
-        const targetDate = document.getElementById('goal-date').value;
-        const planName = document.getElementById('goal-name').value || `Plano ${dist}km`;
-
-        if (!targetDate) return toast('Defina a data da prova!', true);
-        if (!timeMin || timeMin <= 0) return toast('Defina o tempo alvo!', true);
-
-        const res = await api('/data/goal-plans', 'POST', {
-          planName,
-          distanceKm: dist,
-          targetTimeSeconds,
-          targetDate,
-        });
-
-        let html = `<div class="summary-box">✅ ${res.message}</div>`;
-        html += '<div class="stat-detailed" style="margin-top:8px">';
-        html += `<div><div class="val">${dist}km</div><div class="lbl">Distância</div></div>`;
-        html += `<div><div class="val">${formatTimeClient(targetTimeSeconds)}</div><div class="lbl">Tempo Alvo</div></div>`;
-        html += `<div><div class="val">${new Date(targetDate).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>`;
-        html += `<div><div class="val">${res.plan.length} sessões</div><div class="lbl">Total de Treinos</div></div>`;
-        html += '</div>';
-
-        if (res.plan) {
-          html += '<div style="max-height:300px; overflow-y:auto; margin-top:12px">';
-          res.plan.slice(0, 14).forEach(p => {
-            html += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">📅 ${p.date}</span></div><div class="desc">${p.description}</div></div>`;
-          });
-          if (res.plan.length > 14) html += `<p style="color:#64748b; text-align:center; margin-top:8px">...e mais ${res.plan.length - 14} treinos</p>`;
-          html += '</div>';
-        }
-
-        document.getElementById('goal-result').innerHTML = html;
-        loadPlans();
-        toast('Plano por meta criado!');
-      } catch (e) { toast(e.message, true); }
-    }
-
-    function formatTimeClient(sec) {
-      if (!sec || sec <= 0) return '0:00';
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = Math.floor(sec % 60);
-      if (h > 0) return `${h}h${String(m).padStart(2,'0')}m${String(s).padStart(2,'0')}s`;
-      return `${m}:${String(s).padStart(2,'0')}`;
-    }
-
-    // ===================== STRAVA =====================
-
-    async function uploadStravaCSV() {
-      const file = document.getElementById('strava-csv-input').files[0];
-      if (!file) return toast('Selecione um arquivo CSV do Strava', true);
-      const form = new FormData();
-      form.append('file', file);
-      document.getElementById('settings-result').innerHTML = '<div style="color:#38bdf8">Importando...</div>';
-      try {
-        const res = await fetch('/api/data/upload-strava-csv', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form });
-        const data = await res.json();
-        if (!res.ok) return toast(data.error, true);
-        document.getElementById('settings-result').innerHTML = `<div class="summary-box">✅ ${data.message}</div>`;
-        toast(`${data.total} atividades importadas do Strava!`);
-      } catch (e) { toast(e.message, true); }
-    }
-
-    // ===================== PLAN DETAIL VIEW =====================
-
-    function showSectionWithId(id) {
-      document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
-      ['dashboard','upload','zeroplane','meta','plans','plan-detail','faq','settings'].forEach(s => {
-        const el = document.getElementById(s);
-        if (el) el.classList.toggle('hidden', s !== id);
-      });
-    }
+    // ===================== PLAN DETAIL =====================
 
     function showPlanDetail(planId) {
-      showSectionWithId('plan-detail');
-      document.getElementById('pd-workouts').innerHTML = '<div style="color:#38bdf8">Carregando...</div>';
+      showSection('plan-detail');
+      document.getElementById('pd-workouts').innerHTML = '<div style="color:var(--accent)">Carregando...</div>';
       api('/data/plan/' + planId).then(res => {
         const p = res.plan;
         const pd = p.plan_data;
-        document.getElementById('pd-title').textContent = `📋 ${p.plan_name}`;
+        const currentWeek = p.current_week || 1;
+        const totalWeeks = p.weeks || (pd.plan ? Math.max(1, Math.ceil(pd.plan.length / 7)) : 1);
+        document.getElementById('pd-title').textContent = `📋 ${escapeHtml(p.plan_name)}`;
+
+        const pct = Math.round((currentWeek / totalWeeks) * 100);
+        document.getElementById('pd-progress').innerHTML = `
+          <div class="week-progress">
+            <span style="font-size:0.85rem; color:var(--accent); white-space:nowrap; font-weight:600">Semana ${currentWeek}/${totalWeeks}</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">${pct}%</span>
+          </div>`;
+
         let summary = `<div class="stat-detailed">
           <div><div class="val">${p.weeks} sem</div><div class="lbl">Duração</div></div>
           <div><div class="val">${pd.plan ? pd.plan.length : 0}</div><div class="lbl">Treinos</div></div>
@@ -938,24 +1020,31 @@
           <div style="margin-bottom:12px"><button class="btn btn-primary" onclick="syncPlan(${p.id})">🔄 Sincronizar com Intervals.icu</button></div>
           ${summary}`;
 
+        const advanceHtml = currentWeek >= totalWeeks
+          ? '<p style="color:var(--success); font-weight:600">✅ Plano completo! Todas as semanas concluídas.</p>'
+          : `<button class="btn btn-success" onclick="advanceWeek(${p.id}, ${currentWeek})">➡️ Concluir Semana ${currentWeek} e Avançar</button>
+             <div id="advance-result" style="margin-top:8px"></div>`;
+        document.getElementById('pd-advance').innerHTML = advanceHtml;
+
         let html = '';
         if (pd.plan) {
-          let currentWeek = 0;
+          let currentDisplayWeek = 0;
           pd.plan.forEach(w => {
-            if (w.week && w.week !== currentWeek) {
-              currentWeek = w.week;
-              html += `<div style="color:#38bdf8; font-weight:700; margin:16px 0 8px; padding:4px 0; border-bottom:1px solid rgba(56,189,248,0.3)">📅 Semana ${currentWeek}${w.phase ? ' — ' + w.phase : ''}</div>`;
+            if (w.week && w.week !== currentDisplayWeek) {
+              currentDisplayWeek = w.week;
+              const isCurrent = currentDisplayWeek === currentWeek;
+              html += `<div style="color:${isCurrent ? 'var(--success)' : 'var(--accent)'}; font-weight:${isCurrent ? 700 : 600}; margin:16px 0 8px; padding:4px 0; border-bottom:1px solid ${isCurrent ? 'rgba(34,197,94,0.4)' : 'rgba(56,189,248,0.3)'}">📅 Semana ${currentDisplayWeek}${w.phase ? ' — ' + escapeHtml(w.phase) : ''}${isCurrent ? ' ⬅️ Atual' : ''}</div>`;
             }
             const isRest = w.moving_time === 0 || (w.name && w.name.toLowerCase().includes('descanso'));
             if (isRest) {
               html += `<div class="plan-item" style="border-left-color:#64748b; opacity:0.6">
-                <div class="name">🛌 ${w.name}</div>
-                <div class="desc">${w.description ? escapeHtml(w.description).substring(0, 60) : 'Descanso'}</div>
+                <div class="name">🛌 ${escapeHtml(w.name)}</div>
+                <div class="desc">${escapeHtml((w.description||'')).substring(0, 60)}</div>
               </div>`;
             } else {
               const detailLines = (w.detailedPlan || w.description || '').split('\n').filter(l => l.trim());
-              html += `<div class="plan-item" style="border-left-color:#22c55e">
-                <div class="name">🏃 ${w.name} <span style="font-size:0.75rem; color:#64748b">📅 ${new Date(w.date).toLocaleDateString('pt-BR')} | ${Math.round(w.moving_time / 60)}min</span></div>
+              html += `<div class="plan-item" style="border-left-color:var(--success)">
+                <div class="name">🏃 ${escapeHtml(w.name)} <span style="font-size:0.75rem; color:var(--text-dim)">📅 ${new Date(w.date).toLocaleDateString('pt-BR')} | ${Math.round(w.moving_time / 60)}min</span></div>
                 <div class="desc" style="margin-top:4px">${detailLines.map(l => `<div style="padding:2px 0; font-size:0.82rem">${escapeHtml(l)}</div>`).join('')}</div>
               </div>`;
             }
@@ -963,15 +1052,234 @@
         }
         document.getElementById('pd-workouts').innerHTML = html;
       }).catch(e => {
-        document.getElementById('pd-workouts').innerHTML = '<p style="color:#ef4444">Erro: ' + e.message + '</p>';
+        document.getElementById('pd-workouts').innerHTML = '<p style="color:var(--danger)">Erro: ' + escapeHtml(e.message) + '</p>';
       });
     }
 
-    function closePlanDetail() {
-      showSectionWithId('plans');
+    function closePlanDetail() { showSection('plans'); }
+
+    async function advanceWeek(planId, currentWeek) {
+      const btns = document.querySelectorAll('#pd-advance .btn');
+      btns.forEach(b => { b.disabled = true; b.textContent = '⏳ Verificando...'; });
+      document.getElementById('advance-result').innerHTML = '';
+      try {
+        const res = await api('/data/plan/' + planId + '/advance-week', 'POST');
+        if (res.advanced) {
+          document.getElementById('advance-result').innerHTML =
+            `<div class="summary-box" style="border-color:var(--success); color:var(--success)">✅ ${escapeHtml(res.message)}</div>`;
+          toast(`Semana ${currentWeek} concluída! Avançando para Semana ${res.current_week}`);
+        } else {
+          document.getElementById('advance-result').innerHTML =
+            `<div class="summary-box" style="border-color:var(--warning); color:var(--warning)">⚠️ ${escapeHtml(res.message)}</div>`;
+          toast('Complete mais treinos antes de avançar.', true);
+        }
+        showPlanDetail(planId);
+      } catch (e) {
+        document.getElementById('advance-result').innerHTML =
+          `<div style="color:var(--danger); margin-top:8px">${escapeHtml(e.message)}</div>`;
+        btns.forEach(b => { b.disabled = false; b.textContent = '➡️ Concluir Semana ' + currentWeek + ' e Avançar'; });
+      }
     }
 
-    // Chat
+    // ===================== SETTINGS =====================
+
+    async function saveSettings() {
+      try {
+        await api('/auth/settings', 'PUT', {
+          intervals_api_key: document.getElementById('set-api-key').value.trim(),
+          intervals_athlete_id: document.getElementById('set-athlete-id').value.trim(),
+          strava_client_id: document.getElementById('set-strava-id').value.trim(),
+          strava_client_secret: document.getElementById('set-strava-secret').value.trim(),
+          strava_refresh_token: document.getElementById('set-strava-refresh').value.trim(),
+        });
+        toast('Configurações salvas!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    async function connectStrava() {
+      try {
+        const res = await api('/auth/strava/connect');
+        if (res.url) {
+          window.open(res.url, 'strava_auth', 'width=600,height=700');
+          window.addEventListener('message', (e) => {
+            if (e.data === 'strava_connected') {
+              toast('✅ Strava conectado!');
+            }
+          });
+        }
+      } catch (e) { toast(e.message, true); }
+    }
+
+    async function uploadStravaCSV() {
+      const file = document.getElementById('strava-csv-input').files[0];
+      if (!file) return toast('Selecione um arquivo CSV', true);
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext !== 'csv') return toast('Formato inválido. Use .csv', true);
+      const form = new FormData();
+      form.append('file', file);
+      document.getElementById('settings-result').innerHTML = '<div style="color:var(--accent)">Importando...</div>';
+      try {
+        const res = await fetch('/api/data/upload-strava-csv', {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form
+        });
+        const data = await res.json();
+        if (!res.ok) return toast(data.error, true);
+        document.getElementById('settings-result').innerHTML = `<div class="summary-box">✅ ${escapeHtml(data.message)}</div>`;
+        toast(`${data.total} atividades importadas!`);
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== GOAL PLAN =====================
+
+    async function generateGoalPlan() {
+      document.getElementById('goal-result').innerHTML = '<div style="color:var(--accent)">Gerando plano para sua meta...</div>';
+      try {
+        const dist = parseFloat(document.getElementById('goal-dist').value);
+        const timeMin = parseFloat(document.getElementById('goal-time').value);
+        const targetTimeSeconds = timeMin * 60;
+        const targetDate = document.getElementById('goal-date').value;
+        const planName = sanitizeInput(document.getElementById('goal-name').value) || `Plano ${dist}km`;
+
+        if (!targetDate) return toast('Defina a data da prova!', true);
+        if (!timeMin || timeMin <= 0) return toast('Defina o tempo alvo!', true);
+
+        const res = await api('/data/goal-plans', 'POST', { planName, distanceKm: dist, targetTimeSeconds, targetDate });
+
+        let html = `<div class="summary-box">✅ ${escapeHtml(res.message)}</div>`;
+        html += '<div class="stat-detailed" style="margin-top:8px">';
+        html += `<div><div class="val">${dist}km</div><div class="lbl">Distância</div></div>`;
+        html += `<div><div class="val">${formatTimeClient(targetTimeSeconds)}</div><div class="lbl">Tempo Alvo</div></div>`;
+        html += `<div><div class="val">${new Date(targetDate).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>`;
+        html += `<div><div class="val">${res.plan.length} sessões</div><div class="lbl">Total</div></div>`;
+        html += '</div>';
+
+        if (res.plan) {
+          html += '<div style="max-height:300px; overflow-y:auto; margin-top:12px">';
+          res.plan.slice(0, 14).forEach(p => {
+            html += `<div class="plan-item"><div class="name">${escapeHtml(p.name)} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">📅 ${p.date}</span></div><div class="desc">${escapeHtml(p.description)}</div></div>`;
+          });
+          if (res.plan.length > 14) html += `<p style="color:var(--text-dim); text-align:center; margin-top:8px">...e mais ${res.plan.length - 14} treinos</p>`;
+          html += '</div>';
+        }
+
+        document.getElementById('goal-result').innerHTML = html;
+        loadPlans();
+        toast('Plano por meta criado!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== DASHBOARD =====================
+
+    async function loadDashboard() {
+      const container = document.getElementById('dashboard-content');
+      container.innerHTML = '<div style="color:var(--accent)">Carregando painel...</div>';
+      try {
+        const res = await api('/data/dashboard');
+        let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">';
+
+        // Última atividade
+        html += '<div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">';
+        html += '<h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:10px">📌 Última Atividade</h3>';
+        if (res.lastActivity) {
+          const pace = res.lastActivity.pace ? formatPaceClient(res.lastActivity.pace) : '—';
+          const dist = res.lastActivity.distance ? (res.lastActivity.distance / 1000).toFixed(2) : '0';
+          const time = res.lastActivity.time ? Math.round(res.lastActivity.time / 60) + 'min' : '—';
+          html += `<div class="stat-detailed" style="margin-top:0">
+            <div><div class="val">${dist} km</div><div class="lbl">Distância</div></div>
+            <div><div class="val">${pace}</div><div class="lbl">Ritmo</div></div>
+            <div><div class="val">${time}</div><div class="lbl">Duração</div></div>
+            <div><div class="val">${new Date(res.lastActivity.date).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>
+          </div>`;
+          if (res.lastActivitySummary) {
+            html += `<div class="summary-box" style="margin-top:8px; font-size:0.8rem">📝 ${escapeHtml(res.lastActivitySummary.summary)}</div>`;
+          }
+        } else {
+          html += '<p style="color:var(--text-muted); font-size:0.85rem">Nenhuma atividade ainda. Sincronize do Intervals.icu!</p>';
+        }
+        html += '</div>';
+
+        // Próximo treino
+        html += '<div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">';
+        html += '<h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:10px">📅 Próximo Treino</h3>';
+        if (res.nextWorkout) {
+          html += `<div class="plan-item" style="border-left-color:var(--success); margin-bottom:0">
+            <div class="name" style="font-size:0.85rem">${escapeHtml(res.nextWorkout.name)}</div>
+            <div class="desc" style="font-size:0.8rem">📅 ${new Date(res.nextWorkout.date).toLocaleDateString('pt-BR')} — ${Math.round(res.nextWorkout.moving_time / 60)}min</div>
+          </div>`;
+        } else {
+          html += '<p style="color:var(--text-muted); font-size:0.85rem">Nenhum plano ativo. Crie um em TREINO!</p>';
+        }
+        html += '</div>';
+        html += '</div>'; // end grid
+
+        // Planejado vs Realizado
+        html += '<div class="card" style="padding:16px">';
+        html += '<h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:10px">📊 Planejado vs Realizado</h3>';
+        if (res.plannedVsActual && res.plannedVsActual.completed) {
+          html += `<div class="stat-detailed" style="margin-top:0">
+            <div><div class="val" style="color:var(--warning); font-size:0.85rem">${escapeHtml(res.plannedVsActual.planned.name)}</div><div class="lbl">Planejado</div></div>
+            <div><div class="val" style="color:var(--success); font-size:0.85rem">${(res.plannedVsActual.actual.distance / 1000).toFixed(2)} km em ${Math.round(res.plannedVsActual.actual.time / 60)}min</div><div class="lbl">Realizado</div></div>
+          </div>`;
+        } else {
+          html += '<p style="color:var(--text-muted); font-size:0.85rem">Sem comparativo disponível. Sincronize atividades e tenha um plano ativo.</p>';
+        }
+        html += '</div>';
+
+        // Confiança
+        html += '<div class="card" style="padding:16px; text-align:center">';
+        html += '<h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:10px">📈 Nível de Confiança</h3>';
+        const conf = res.confidence || 0;
+        const confColor = conf < 40 ? '#ef4444' : conf < 70 ? '#fbbf24' : '#22c55e';
+        html += `<div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px; display:inline-block">
+          <div style="position:relative; display:inline-block; width:140px; height:140px">
+            <svg viewBox="0 0 100 100" style="transform:rotate(-90deg); width:140px; height:140px">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(30,41,59,0.6)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="${confColor}" stroke-width="8"
+                stroke-dasharray="264" stroke-dashoffset="${264 - (264 * conf / 100)}" stroke-linecap="round"
+                style="transition: stroke-dashoffset 0.8s"/>
+            </svg>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)">
+              <div style="font-size:2.2rem; font-weight:700; color:${confColor}">${conf}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted)">/ 100</div>
+            </div>
+          </div>
+          <p style="color:var(--text-muted); margin-top:8px; font-size:0.85rem">
+            ${conf < 40 ? '🔴 Baixo — precisa treinar com mais consistência' : conf < 70 ? '🟡 Médio — no caminho certo' : '🟢 Alto — ótima consistência!'}
+          </p>
+          <p style="color:var(--text-dim); font-size:0.75rem">Baseado em ${res.recentActivityCount} atividades nos últimos 30 dias</p>
+        </div>`;
+        html += '</div>';
+
+        // Meta ativa
+        if (res.goalPlan) {
+          html += '<div class="card" style="padding:16px; border-left:3px solid var(--warning)">';
+          html += `<h3 style="color:var(--warning); font-size:0.9rem; margin-bottom:10px">🎯 Meta: ${escapeHtml(res.goalPlan.plan_name)}</h3>`;
+          const gp = res.goalPlan;
+          html += `<div class="stat-detailed" style="margin-top:0">
+            <div><div class="val">${gp.distance_km}km</div><div class="lbl">Distância</div></div>
+            <div><div class="val">${formatPaceClient(gp.target_pace)}</div><div class="lbl">Ritmo Alvo</div></div>
+            <div><div class="val">${new Date(gp.target_date).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>
+            <div><div class="val">${gp.weeks} sem</div><div class="lbl">Plano</div></div>
+          </div>`;
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = '<p style="color:var(--danger)">Erro ao carregar: ' + escapeHtml(e.message) + '</p>';
+      }
+    }
+
+    async function syncActivities() {
+      try {
+        const res = await api('/data/sync-activities', 'POST', { days: 30 });
+        toast(`${res.total} atividades importadas!`);
+        loadDashboard();
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== CHAT =====================
+
     function toggleChat() {
       document.getElementById('chat-widget').classList.toggle('open');
       if (document.getElementById('chat-widget').classList.contains('open')) {
@@ -979,10 +1287,35 @@
       }
     }
 
+    function renderChatMessage(text) {
+      if (!text) return '';
+      let html = escapeHtml(text);
+      // Numbered options: "1. texto" or "1) texto"
+      html = html.replace(/(?:^|\n)(\d+)[.)]\s+([^\n]+)/g, (match, num, label) => {
+        const trimmed = escapeHtml(label.trim()).replace(/'/g, "\\'");
+        return `<br><button class="chat-option-btn" onclick="sendChatMessage('${trimmed.replace(/"/g, '&quot;')}')">${num}. ${trimmed}</button>`;
+      });
+      // Bullet options
+      html = html.replace(/(?:^|\n)[•\-]\s+([^\n]+)/g, (match, label) => {
+        const trimmed = escapeHtml(label.trim()).replace(/'/g, "\\'");
+        return `<br><button class="chat-option-btn" onclick="sendChatMessage('${trimmed.replace(/"/g, '&quot;')}')">• ${trimmed}</button>`;
+      });
+      return html;
+    }
+
+    function sendChatMessage(msg) {
+      document.getElementById('chat-input').value = msg;
+      sendChat();
+    }
+
     async function sendChat() {
       const input = document.getElementById('chat-input');
-      const msg = input.value.trim();
+      let msg = input.value.trim();
       if (!msg) return;
+
+      // Sanitize user input
+      msg = sanitizeInput(msg);
+      if (msg.length > 500) msg = msg.substring(0, 500);
 
       const msgs = document.getElementById('chat-messages');
       msgs.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
@@ -992,19 +1325,16 @@
       document.getElementById('chat-send').disabled = true;
       try {
         const res = await api('/chat', 'POST', { message: msg });
-        msgs.innerHTML += `<div class="chat-msg ai"><span class="ai-badge">IA</span>${escapeHtml(res.response)}</div>`;
+        const rendered = renderChatMessage(res.response);
+        msgs.innerHTML += `<div class="chat-msg ai"><span class="ai-badge">IA</span>${rendered}</div>`;
       } catch {
-        msgs.innerHTML += `<div class="chat-msg ai" style="color:#ef4444">Desculpe, não consegui responder agora. Tente novamente!</div>`;
+        msgs.innerHTML += `<div class="chat-msg ai" style="color:var(--danger)">Desculpe, não consegui responder agora.</div>`;
       }
       document.getElementById('chat-send').disabled = false;
       msgs.scrollTop = msgs.scrollHeight;
     }
 
-    function escapeHtml(text) {
-      const d = document.createElement('div');
-      d.textContent = text;
-      return d.innerHTML;
-    }
+    // ===================== INIT =====================
 
     initApp();
   </script>

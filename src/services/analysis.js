@@ -351,6 +351,7 @@ async function generatePlan(analysis, userProfile, weeks = 4, target5kMin = 19) 
         type: 'Run',
         moving_time: d.isRest ? 0 : d.time,
         detailedPlan: detailedDesc,
+        week: weekNum,
         workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, zones, d.time),
       };
 
@@ -393,6 +394,7 @@ async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
           description: 'Descanso total ou caminhada leve de 15 min.',
           type: 'Run',
           moving_time: 0,
+          week: w + 1,
         });
         current.setDate(current.getDate() + 1);
         continue;
@@ -416,6 +418,7 @@ async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
         detailedPlan: detailedDesc,
         type: 'Run',
         moving_time: time,
+        week: w + 1,
         workout_doc: buildWorkoutDoc(name, 'beginner', beginnerZones, time),
       });
 
