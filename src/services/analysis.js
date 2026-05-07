@@ -454,7 +454,8 @@ async function syncToCalendar(plan, client) {
         moving_time: w.moving_time,
       };
       if (w.workout_doc) {
-        eventData.workout_doc = w.workout_doc;
+        // API do Intervals.icu espera workout_doc como JSON string, não objeto
+        eventData.workout_doc = typeof w.workout_doc === 'string' ? w.workout_doc : JSON.stringify(w.workout_doc);
       }
       await client.events.createEvent(eventData);
       created++;
