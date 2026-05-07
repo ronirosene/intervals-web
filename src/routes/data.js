@@ -5,6 +5,7 @@ const XLSX = require('xlsx');
 const { IntervalsClient } = require('intervals-icu');
 const { auth } = require('../middleware/auth');
 const { analyzeRuns, generatePlan, syncToCalendar, generateZeroPlan, generateGoalPlan } = require('../services/analysis');
+const { generateEvolutionInsight } = require('../services/ai');
 const { query } = require('../db/pg');
 
 const router = express.Router();
@@ -379,6 +380,119 @@ function formatPace(pace) {
   const sec = Math.floor(pace % 60);
   return `${min}:${sec.toString().padStart(2, '0')}/km`;
 }
+
+// ===================== EVOLUTION SUMMARY =====================
+
+// Estatísticas de evolução por período (3, 6, 12 meses)
+router.get('/evolution', auth, async (req, res) => {
+  try {
+    const periods = [
+      { label: '3 meses', days: 90 },
+      { label: '6 meses', days: 180 },
+      { label: '12 meses', days: 365 },
+    ];
+
+    const results = [];
+
+    for (const period of periods) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - period.days);
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+
+      const data = await query(
+        `SELECT * FROM activity_log WHERE user_id = $1 AND start_date >= $2 AND distance > 0 AND moving_time > 0 ORDER BY start_date`,
+        [req.userId, cutoffStr]
+      );
+
+      const rows = data.rows;
+      const totalRuns = rows.length;
+      const totalDistance = rows.reduce((s, r) => s + (r.distance || 0), 0);
+      const totalTime = rows.reduce((s, r) => s + (r.moving_time || 0), 0);
+      const avgPace = totalDistance > 0 ? totalTime / (totalDistance / 1000) : 0;
+      const avgHr = rows.filter(r => r.avg_hr > 0).reduce((s, r, _, arr) => s + (r.avg_hr || 0) / arr.length, 0);
+      const bestPace = Math.min(...rows.map(r => r.avg_pace).filter(p => p > 0));
+      const sortedByDist = [...rows].sort((a, b) => (b.distance || 0) - (a.distance || 0));
+      const longestRun = sortedByDist[0] || null;
+
+      // Frequência semanal
+      const weeksInPeriod = period.days / 7;
+      const runsPerWeek = weeksInPeriod > 0 ? totalRuns / weeksInPeriod : 0;
+      const avgDistPerRun = totalRuns > 0 ? (totalDistance / totalRuns / 1000) : 0;
+
+      results.push({
+        period: period.label,
+        totalRuns,
+        totalDistanceKm: (totalDistance / 1000).toFixed(1),
+        totalTimeMin: Math.round(totalTime / 60),
+        avgPace: avgPace > 0 ? formatPace(avgPace) : '—',
+        avgHr: Math.round(avgHr) || '—',
+        bestPace: bestPace > 0 && bestPace < 600 ? formatPace(bestPace) : '—',
+        longestRunKm: longestRun ? (longestRun.distance / 1000).toFixed(2) : '—',
+        runsPerWeek: runsPerWeek.toFixed(1),
+        avgDistPerRunKm: avgDistPerRun.toFixed(2),
+      });
+    }
+
+    // Comparação: 3 meses atuais vs 3 meses anteriores
+    const now = new Date();
+    const recent3Cutoff = new Date(now); recent3Cutoff.setDate(recent3Cutoff.getDate() - 90);
+    const prev3Cutoff = new Date(recent3Cutoff); prev3Cutoff.setDate(prev3Cutoff.getDate() - 90);
+
+    const recent3 = (await query(
+      `SELECT * FROM activity_log WHERE user_id = $1 AND start_date >= $2 AND distance > 0 AND moving_time > 0`,
+      [req.userId, recent3Cutoff.toISOString().split('T')[0]]
+    )).rows;
+    const prev3 = (await query(
+      `SELECT * FROM activity_log WHERE user_id = $1 AND start_date >= $2 AND start_date < $3 AND distance > 0 AND moving_time > 0`,
+      [req.userId, prev3Cutoff.toISOString().split('T')[0], recent3Cutoff.toISOString().split('T')[0]]
+    )).rows;
+
+    const calcStats = (rows) => {
+      const d = rows.reduce((s, r) => s + (r.distance || 0), 0);
+      const t = rows.reduce((s, r) => s + (r.moving_time || 0), 0);
+      return {
+        runs: rows.length,
+        distKm: (d / 1000).toFixed(1),
+        avgPace: d > 0 ? formatPace(t / (d / 1000)) : '—',
+        freq: (rows.length / 13).toFixed(1),
+      };
+    };
+
+    const recentStats = calcStats(recent3);
+    const prevStats = calcStats(prev3);
+
+    const diff = {
+      runs: recent3.length - prev3.length,
+      runsPct: prev3.length > 0 ? Math.round(((recent3.length - prev3.length) / prev3.length) * 100) : null,
+      distKm: ((recent3.reduce((s, r) => s + (r.distance || 0), 0) - prev3.reduce((s, r) => s + (r.distance || 0), 0)) / 1000).toFixed(1),
+    };
+
+    let trend = 'estável';
+    if (diff.runsPct !== null) {
+      if (diff.runsPct > 20) trend = 'crescimento';
+      else if (diff.runsPct < -20) trend = 'queda';
+    }
+
+    // Gera insight com IA
+    let insight = '';
+    try {
+      insight = await generateEvolutionInsight(results, { recent3mo: recentStats, prev3mo: prevStats, diff, trend });
+    } catch {}
+
+    res.json({
+      periods: results,
+      comparison: {
+        recent3mo: recentStats,
+        prev3mo: prevStats,
+        diff,
+        trend,
+      },
+      insight,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao calcular evolução' });
+  }
+});
 
 // ===================== GOAL-BASED PLANS =====================
 

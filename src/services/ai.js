@@ -62,4 +62,51 @@ async function generateSummary(analysis) {
   }
 }
 
-module.exports = { generateWorkoutDescription, generateSummary };
+async function generateEvolutionInsight(periodsData, comparison) {
+  if (!process.env.GEMINI_API_KEY) {
+    return getFallbackInsight(periodsData, comparison);
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const dataStr = periodsData.map(p =>
+      `${p.period}: ${p.totalRuns} corridas, ${p.totalDistanceKm}km, ritmo ${p.avgPace}, ${p.runsPerWeek} corridas/semana, média ${p.avgDistPerRunKm}km/corrida`
+    ).join('\n');
+
+    const compStr = comparison ? `
+Comparação últimos 3 meses vs 3 meses anteriores:
+- Recente: ${comparison.recent3mo.runs} corridas, ${comparison.recent3mo.distKm}km, ${comparison.recent3mo.freq}/semana
+- Anterior: ${comparison.prev3mo.runs} corridas, ${comparison.prev3mo.distKm}km, ${comparison.prev3mo.freq}/semana
+- Tendência: ${comparison.trend} (${comparison.diff.runsPct > 0 ? '+' : ''}${comparison.diff.runsPct}% em corridas)
+` : '';
+
+    const prompt = `Você é um coach de corrida analisando a evolução de um atleta.
+Com base nos dados abaixo, gere UM PARÁGRAFO CURTO (2-3 frases) em português brasileiro, motivacional e com emojis, destacando:
+- A evolução ou tendência principal
+- Um ponto de melhoria ou parabéns específico
+
+Dados de treino por período:
+${dataStr}
+${compStr}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    return text || getFallbackInsight(periodsData, comparison);
+  } catch {
+    return getFallbackInsight(periodsData, comparison);
+  }
+}
+
+function getFallbackInsight(periodsData, comparison) {
+  const p = periodsData[0] || {};
+  const trend = comparison?.trend || 'estável';
+  if (trend === 'crescimento') {
+    return `📈 Evolução positiva! Nos últimos 3 meses foram ${p.totalRuns} corridas (${p.totalDistanceKm}km), com média de ${p.runsPerWeek} por semana. Continue assim que a consistência está trazendo resultados! 🏃‍♂️`;
+  } else if (trend === 'queda') {
+    return `📉 Nos últimos 3 meses você fez ${p.totalRuns} corridas. Que tal retomar a regularidade? Mesmo 2x por semana já mantém a base! 💪`;
+  }
+  return `🏃‍♂️ Nos últimos 3 meses: ${p.totalRuns} corridas, ${p.totalDistanceKm}km percorridos, ritmo médio de ${p.avgPace}. Mantenha a consistência que os resultados aparecem!`;
+}
+
+module.exports = { generateWorkoutDescription, generateSummary, generateEvolutionInsight };

@@ -1264,6 +1264,39 @@
           html += '</div>';
         }
 
+        // === EVOLUÇÃO ===
+        html += '<div class="card" style="padding:16px">';
+        html += '<h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:12px">📈 Evolução por Período</h3>';
+        try {
+          const evo = await api('/data/evolution');
+          html += `<div class="summary-box" style="font-style:normal; margin-bottom:12px">${escapeHtml(evo.insight)}</div>`;
+          html += '<div style="overflow-x:auto">';
+          html += '<table style="width:100%; border-collapse:collapse; font-size:0.82rem">';
+          html += '<tr style="color:var(--text-dim); border-bottom:1px solid var(--border-light)">';
+          html += '<th style="padding:6px 8px; text-align:left">Período</th><th style="padding:6px 8px">Corridas</th><th style="padding:6px 8px">Distância</th><th style="padding:6px 8px">Ritmo</th><th style="padding:6px 8px">Freq/sem</th><th style="padding:6px 8px">Média km</th></tr>';
+          evo.periods.forEach(p => {
+            html += `<tr style="border-bottom:1px solid rgba(51,65,85,0.3)">
+              <td style="padding:8px; color:var(--accent); font-weight:600">${escapeHtml(p.period)}</td>
+              <td style="padding:8px; text-align:center">${p.totalRuns}</td>
+              <td style="padding:8px; text-align:center">${p.totalDistanceKm} km</td>
+              <td style="padding:8px; text-align:center">${p.avgPace}</td>
+              <td style="padding:8px; text-align:center">${p.runsPerWeek}</td>
+              <td style="padding:8px; text-align:center">${p.avgDistPerRunKm}</td>
+            </tr>`;
+          });
+          html += '</table></div>';
+
+          // Tendência
+          const trend = evo.comparison?.trend || 'estável';
+          const trendIcon = trend === 'crescimento' ? '📈' : trend === 'queda' ? '📉' : '➡️';
+          const trendColor = trend === 'crescimento' ? 'var(--success)' : trend === 'queda' ? 'var(--danger)' : 'var(--text-muted)';
+          html += `<div style="margin-top:10px; font-size:0.82rem; color:${trendColor}">
+            ${trendIcon} Tendência: <strong>${trend}</strong>
+            ${evo.comparison?.diff.runsPct !== null ? ` (${evo.comparison.diff.runsPct > 0 ? '+' : ''}${evo.comparison.diff.runsPct}% em corridas vs trimestre anterior)` : ''}
+          </div>`;
+        } catch {}
+        html += '</div>';
+
         container.innerHTML = html;
       } catch (e) {
         container.innerHTML = '<p style="color:var(--danger)">Erro ao carregar: ' + escapeHtml(e.message) + '</p>';
