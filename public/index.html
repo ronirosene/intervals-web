@@ -3,43 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Intervals Training Hub</title>
+  <title>Roni Treinos IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 30px; }
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background: #0b1120;
+      color: #e2e8f0;
+      min-height: 100vh;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(56,189,248,0.07) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; position: relative; z-index: 1; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid rgba(51,65,85,0.6); margin-bottom: 30px; }
+    .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .logo svg { flex-shrink: 0; }
+    .logo-text { display: flex; flex-direction: column; }
+    .logo-text h1 { font-size: 1.3rem; font-weight: 800; color: #38bdf8; letter-spacing: -0.5px; line-height: 1.2; }
+    .logo-text span { font-size: 0.65rem; color: #64748b; font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; }
     h1 { font-size: 1.5rem; color: #38bdf8; }
-    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; font-family: 'Inter', sans-serif; }
     .btn-primary { background: #38bdf8; color: #0f172a; }
+    .btn-primary:hover { background: #7dd3fc; transform: translateY(-1px); }
     .btn-success { background: #22c55e; color: #0f172a; }
+    .btn-success:hover { background: #4ade80; transform: translateY(-1px); }
     .btn-danger { background: #ef4444; color: white; font-size: 0.75rem; }
+    .btn-danger:hover { background: #f87171; }
     .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
-    .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #334155; }
+    .btn-outline:hover { border-color: #38bdf8; color: #38bdf8; }
+    .card { background: rgba(30,41,59,0.85); backdrop-filter: blur(8px); border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(51,65,85,0.5); }
     .card h2 { color: #38bdf8; margin-bottom: 16px; font-size: 1.2rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .stat { text-align: center; padding: 16px; background: #0f172a; border-radius: 8px; }
+    .stat { text-align: center; padding: 16px; background: rgba(15,23,42,0.6); border-radius: 8px; }
     .stat .value { font-size: 2rem; font-weight: 700; color: #38bdf8; }
     .stat .label { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.9rem; }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: #38bdf8; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; background: rgba(15,23,42,0.8); border: 1px solid rgba(51,65,85,0.6); border-radius: 6px; color: #e2e8f0; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
     .hidden { display: none; }
-    #auth { text-align: center; padding: 60px 0; }
+    #auth { text-align: center; padding: 40px 0; }
     #auth .card { max-width: 400px; margin: 0 auto; }
+    .auth-logo { margin-bottom: 24px; }
     .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab { padding: 8px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; cursor: pointer; color: #94a3b8; }
-    .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
-    .plan-item { padding: 12px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #38bdf8; }
+    .tab { padding: 8px 16px; background: rgba(30,41,59,0.6); border: 1px solid rgba(51,65,85,0.4); border-radius: 6px; cursor: pointer; color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 0.85rem; transition: 0.2s; }
+    .tab:hover { border-color: #38bdf8; color: #38bdf8; }
+    .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 600; }
+    .plan-item { padding: 12px; background: rgba(15,23,42,0.6); border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #38bdf8; }
     .plan-item .name { font-weight: 600; }
     .plan-item .desc { font-size: 0.85rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4; }
     .plan-item .actions { display: flex; gap: 6px; margin-top: 8px; }
     .ai-badge { background: linear-gradient(45deg, #38bdf8, #818cf8); color: #0f172a; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
-    .summary-box { background: #0f172a; padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #475569; color: #94a3b8; font-style: italic; }
+    .summary-box { background: rgba(15,23,42,0.6); padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid rgba(71,85,105,0.4); color: #94a3b8; font-style: italic; }
     .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #22c55e; color: #0f172a; border-radius: 8px; font-weight: 600; z-index: 1000; transform: translateY(100px); transition: 0.3s; }
     .toast.show { transform: translateY(0); }
-    .faq-item { padding: 14px; background: #0f172a; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #334155; }
+    .toast.error { background: #ef4444; }
+    .faq-item { padding: 14px; background: rgba(15,23,42,0.6); border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid rgba(51,65,85,0.4); }
     .faq-item .faq-q { font-weight: 600; color: #38bdf8; }
     .faq-item .faq-a { margin-top: 8px; color: #94a3b8; display: none; line-height: 1.6; }
     .faq-item.open .faq-a { display: block; }
@@ -57,37 +97,52 @@
     .chat-msg.ai { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-bottom-left-radius: 4px; }
     .chat-msg.ai .ai-badge { font-size: 0.65rem; background: #38bdf8; color:#0f172a; padding:1px 5px; border-radius:3px; margin-right:4px; }
     .chat-input-area { display: flex; padding: 10px; gap: 8px; border-top: 1px solid #334155; background: #0f172a; }
-    .chat-input-area input { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 20px; color: #e2e8f0; font-size: 0.85rem; outline: none; }
+    .chat-input-area input { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 20px; color: #e2e8f0; font-size: 0.85rem; outline: none; font-family: 'Inter', sans-serif; }
     .chat-input-area input:focus { border-color: #38bdf8; }
     .chat-input-area button { background: #38bdf8; border: none; border-radius: 50%; width: 32px; height: 32px; color: #0f172a; cursor: pointer; font-size: 1rem; }
     .chat-input-area button:disabled { opacity: 0.4; }
     .chat-welcome { color: #94a3b8; font-size: 0.8rem; padding: 16px; text-align: center; }
     .stat-detailed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-    .stat-detailed div { padding: 8px; background: #0f172a; border-radius: 4px; text-align: center; }
+    .stat-detailed div { padding: 8px; background: rgba(15,23,42,0.6); border-radius: 4px; text-align: center; }
     .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
     .stat-detailed .lbl { font-size: 0.7rem; color: #94a3b8; }
-    .speedometer { background: #0f172a; border-radius: 8px; padding: 16px; text-align: center; }
+    .speedometer { background: rgba(15,23,42,0.6); border-radius: 8px; padding: 16px; text-align: center; }
     .meta-card { border-left: 3px solid #fbbf24; }
+    @media (max-width: 600px) {
+      .container { padding: 12px; }
+      header { flex-direction: column; gap: 12px; }
+      .logo-text h1 { font-size: 1.1rem; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div id="auth">
-      <header><h1>🏃 Intervals Training Hub</h1></header>
+      <div class="auth-logo">
+        <svg width="140" height="50" viewBox="0 0 140 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="25" cy="25" r="18" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+          <circle cx="25" cy="16" r="5" fill="#38bdf8"/>
+          <path d="M18 32 Q16 28, 21 26 Q25 24, 28 22 Q32 20, 36 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M13 38 Q14 34, 18 32" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M36 17 L38 13 L42 14" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <text x="52" y="22" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="800" fill="#38bdf8">Roni</text>
+          <text x="52" y="35" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" fill="#818cf8">Treinos IA</text>
+        </svg>
+      </div>
       <div class="card">
         <div class="tabs">
           <div class="tab active" onclick="showTab('login')">Login</div>
           <div class="tab" onclick="showTab('register')">Registrar</div>
         </div>
         <div id="login-form">
-          <div class="form-group"><label>Email</label><input type="email" id="login-email"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="login-password"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="login-password" placeholder="••••••"></div>
           <button class="btn btn-primary" style="width:100%" onclick="login()">Entrar</button>
         </div>
         <div id="register-form" class="hidden">
-          <div class="form-group"><label>Nome</label><input type="text" id="reg-name"></div>
-          <div class="form-group"><label>Email</label><input type="email" id="reg-email"></div>
-          <div class="form-group"><label>Senha</label><input type="password" id="reg-password"></div>
+          <div class="form-group"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="reg-password" placeholder="••••••"></div>
           <button class="btn btn-primary" style="width:100%" onclick="register()">Criar conta</button>
         </div>
       </div>
@@ -95,9 +150,21 @@
 
     <div id="app" class="hidden">
       <header>
-        <h1>🏃 Intervals Training Hub</h1>
+        <div class="logo">
+          <svg width="32" height="32" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="25" cy="25" r="18" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+            <circle cx="25" cy="16" r="5" fill="#38bdf8"/>
+            <path d="M18 32 Q16 28, 21 26 Q25 24, 28 22 Q32 20, 36 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path d="M13 38 Q14 34, 18 32" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+            <path d="M36 17 L38 13 L42 14" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          </svg>
+          <div class="logo-text">
+            <h1>Roni Treinos IA</h1>
+            <span>Coach inteligente</span>
+          </div>
+        </div>
         <div>
-          <span id="user-name" style="color:#94a3b8; margin-right:10px"></span>
+          <span id="user-name" style="color:#94a3b8; margin-right:10px; font-size:0.9rem"></span>
           <button class="btn btn-outline" onclick="logout()">Sair</button>
         </div>
       </header>
@@ -129,7 +196,7 @@
       <div id="upload" class="hidden">
         <div class="card"><h2>📁 Upload de Atividades (Intervals.icu)</h2>
           <p style="color:#94a3b8; margin-bottom:12px">Envie seu arquivo .xlsx exportado do Intervals.icu para análise completa.</p>
-          <input type="file" id="file-input" accept=".xlsx,.xls" style="width:100%; padding:20px; border:2px dashed #334155; border-radius:8px; color:#94a3b8; cursor:pointer">
+          <input type="file" id="file-input" accept=".xlsx,.xls" style="width:100%; padding:20px; border:2px dashed rgba(51,65,85,0.5); border-radius:8px; color:#94a3b8; cursor:pointer; background:rgba(15,23,42,0.4)">
           <button class="btn btn-primary" style="margin-top:12px" onclick="uploadFile()">📊 Analisar Dados</button>
           <div id="upload-result" style="margin-top:12px"></div>
         </div>
@@ -278,8 +345,7 @@
     function toast(msg, err) {
       const t = document.getElementById('toast');
       t.textContent = msg;
-      t.style.background = err ? '#ef4444' : '#22c55e';
-      t.classList.add('show');
+      t.className = 'toast' + (err ? ' error' : '') + ' show';
       setTimeout(() => t.classList.remove('show'), 3000);
     }
 
@@ -330,7 +396,6 @@
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
         loadPlans();
         loadDashboard();
-        // Seta data padrão para plano por meta (+3 meses)
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
         document.getElementById('goal-date').value = d.toISOString().split('T')[0];
@@ -389,7 +454,6 @@
         preview.innerHTML += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">IA</span></div><div class="desc">${p.description.substring(0,80)}...</div></div>`;
       });
       preview.innerHTML += '</div>';
-      // Mostra no resultado ativo
       const activeResult = document.getElementById('gen-result');
       if (activeResult) { activeResult.innerHTML = ''; activeResult.appendChild(preview); }
     }
@@ -412,7 +476,7 @@
             <div class="plan-item" style="border-left-color: ${p.synced ? '#22c55e' : '#38bdf8'}">
               <div class="name">📋 ${p.plan_name || 'Sem nome'} <span style="font-size:0.8rem; color:#94a3b8">(${p.weeks} sem • ${sessions} treinos) ${p.synced ? '✅ Sincronizado' : '⏳ Pendente'}</span></div>
               <div class="desc" style="font-size:0.8rem; color:#64748b">Criado em ${new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
-              ${worksoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid #1e293b">' + worksoutsPreview + '</div>' : ''}
+              ${worksoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(30,41,59,0.6)">' + worksoutsPreview + '</div>' : ''}
               <div class="actions">
                 <button class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">🔄 Sincronizar</button>
                 <button class="btn btn-danger" onclick="deletePlan(${p.id})">🗑️ Excluir</button>
@@ -507,10 +571,10 @@
         html += '<h3 style="color:#38bdf8; margin-bottom:10px">📈 Nível de Confiança</h3>';
         const conf = res.confidence || 0;
         const confColor = conf < 40 ? '#ef4444' : conf < 70 ? '#fbbf24' : '#22c55e';
-        html += `<div style="background:#0f172a; border-radius:8px; padding:16px; text-align:center">
+        html += `<div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px; text-align:center">
           <div style="position:relative; display:inline-block; width:160px; height:160px; margin:0 auto">
             <svg viewBox="0 0 100 100" style="transform:rotate(-90deg); width:160px; height:160px">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(30,41,59,0.6)" stroke-width="8"/>
               <circle cx="50" cy="50" r="42" fill="none" stroke="${confColor}" stroke-width="8"
                 stroke-dasharray="264" stroke-dashoffset="${264 - (264 * conf / 100)}" stroke-linecap="round"
                 style="transition: stroke-dashoffset 0.8s"/>
@@ -584,7 +648,6 @@
           targetDate,
         });
 
-        // Preview
         let html = `<div class="summary-box">✅ ${res.message}</div>`;
         html += '<div class="stat-detailed" style="margin-top:8px">';
         html += `<div><div class="val">${dist}km</div><div class="lbl">Distância</div></div>`;
@@ -593,7 +656,6 @@
         html += `<div><div class="val">${res.plan.length} sessões</div><div class="lbl">Total de Treinos</div></div>`;
         html += '</div>';
 
-        // Primeiras 2 semanas
         if (res.plan) {
           html += '<div style="max-height:300px; overflow-y:auto; margin-top:12px">';
           res.plan.slice(0, 14).forEach(p => {
