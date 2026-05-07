@@ -64,6 +64,10 @@ async function initDb() {
     // Adiciona coluna plan_name se não existir (para tabelas já criadas)
     await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'Meu Plano'`).catch(() => {});
     await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS goal_plan_id INTEGER`).catch(() => {});
+    // Colunas do Strava (para tabelas já existentes)
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_client_id TEXT`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_client_secret TEXT`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS strava_refresh_token TEXT`).catch(() => {});
 
     // Tabela para log de atividades sincronizadas em tempo real
     await query(`
