@@ -34,8 +34,9 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
     const analysis = analyzeRuns(runs);
 
     await query(
-      'INSERT INTO activities (user_id, file_path, total_activities, total_runs, total_distance, avg_pace, avg_hr, weekly_avg) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [req.userId, req.file.filename, data.length, analysis.totalRuns, analysis.totalDist, analysis.avgPace, analysis.avgHR, analysis.avgWeeklyDist]
+      `INSERT INTO activities (user_id, file_path, total_activities, total_runs, total_distance, best_5k_pace, best_5k_time, avg_pace, avg_hr, weekly_avg)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [req.userId, req.file.filename, data.length, analysis.totalRuns, analysis.totalDist, analysis.best5k?.pace || null, analysis.best5k?.time || null, analysis.avgPace, analysis.avgHR, analysis.avgWeeklyDist]
     );
 
     res.json({
@@ -531,15 +532,23 @@ router.post('/goal-plans', auth, async (req, res) => {
     [req.userId]
   );
   if (recentRuns.rows.length >= 3) {
-    const analysis = analyzeRuns(recentRuns.rows);
+    // Mapeia colunas do banco para o formato esperado pelo analyzeRuns
+    const mapped = recentRuns.rows.map(r => ({
+      ...r,
+      start_date_local: r.start_date,
+      average_heartrate: r.avg_hr,
+    }));
+    const analysis = analyzeRuns(mapped);
     current5kPace = analysis.best5k ? analysis.best5k.pace : analysis.avgPace;
   }
   if (!current5kPace) {
     const lastActivity = await query(
-      'SELECT avg_pace FROM activities WHERE user_id = $1 AND avg_pace > 0 ORDER BY id DESC LIMIT 1',
+      'SELECT best_5k_pace, avg_pace FROM activities WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
       [req.userId]
     );
-    if (lastActivity.rows.length > 0) current5kPace = lastActivity.rows[0].avg_pace;
+    if (lastActivity.rows.length > 0) {
+      current5kPace = lastActivity.rows[0].best_5k_pace || lastActivity.rows[0].avg_pace;
+    }
   }
   if (!current5kPace) current5kPace = 300; // fallback: 5:00/km
 
