@@ -422,4 +422,94 @@ router.post('/upload-strava-csv', auth, upload.single('file'), async (req, res) 
   }
 });
 
+// ===================== MANUAL ACTIVITY ENTRY =====================
+
+// Adicionar atividade manualmente
+router.post('/manual-activity', auth, async (req, res) => {
+  const { date, distanceKm, minutes, seconds, heartRate, notes } = req.body;
+  if (!date || !distanceKm || distanceKm <= 0) {
+    return res.status(400).json({ error: 'Data e distância são obrigatórios' });
+  }
+  const totalSec = (minutes || 0) * 60 + (seconds || 0);
+  const distM = distanceKm * 1000;
+  const pace = totalSec > 0 && distM > 0 ? totalSec / distanceKm : 0;
+  try {
+    await query(
+      `INSERT INTO activity_log (user_id, intervals_activity_id, name, type, distance, moving_time, avg_pace, avg_hr, start_date, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [req.userId, 'manual_' + Date.now() + '_' + req.userId, notes || 'Corrida manual', 'Run', distM, totalSec, pace, heartRate || null, date, notes || '']
+    );
+    res.json({ message: `Atividade de ${distanceKm}km registrada!`, pace });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao registrar: ' + e.message });
+  }
+});
+
+// ===================== STRAVA LINK IMPORT =====================
+
+// Importar atividade do Strava pelo link
+router.post('/strava-import-link', auth, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'Link da atividade é obrigatório' });
+
+  // Extrai ID da URL (ex: strava.com/activities/1234567890)
+  const match = url.match(/strava\.com\/activities\/(\d+)/i);
+  if (!match) return res.status(400).json({ error: 'Link do Strava inválido. Use algo como: https://www.strava.com/activities/1234567890' });
+
+  const activityId = match[1];
+
+  try {
+    // Tenta buscar via API se tiver tokens configurados
+    const user = await query('SELECT strava_client_id, strava_client_secret, strava_refresh_token FROM users WHERE id = $1', [req.userId]);
+    const u = user.rows[0];
+
+    if (u && u.strava_client_id && u.strava_client_secret && u.strava_refresh_token) {
+      // Troca refresh token por access token
+      const tokenResp = await fetch('https://www.strava.com/api/v3/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: u.strava_client_id,
+          client_secret: u.strava_client_secret,
+          grant_type: 'refresh_token',
+          refresh_token: u.strava_refresh_token,
+        }),
+      });
+      const tokenData = await tokenResp.json();
+      const accessToken = tokenData.access_token;
+      if (tokenData.refresh_token) {
+        await query('UPDATE users SET strava_refresh_token = $1 WHERE id = $2', [tokenData.refresh_token, req.userId]);
+      }
+
+      if (accessToken) {
+        const actResp = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (actResp.ok) {
+          const act = await actResp.json();
+          const pace = act.moving_time > 0 && act.distance > 0 ? act.moving_time / (act.distance / 1000) : 0;
+          await query(
+            `INSERT INTO activity_log (user_id, intervals_activity_id, name, type, distance, moving_time, avg_pace, avg_hr, start_date, description)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (intervals_activity_id) DO NOTHING`,
+            [req.userId, 'strava_' + activityId, act.name || 'Strava Run', act.type || 'Run', act.distance || 0, act.moving_time || 0, pace, act.average_heartrate || null, act.start_date || date, act.description || '']
+          );
+          return res.json({ message: `✅ "${act.name}" importado do Strava!`, distance: act.distance, moving_time: act.moving_time, pace });
+        }
+      }
+    }
+
+    // Sem API configurada: oferecer entrada manual
+    return res.json({
+      message: `Link reconhecido! Atividade #${activityId}.`,
+      activityId,
+      manual: true,
+      hint: 'Configure o Strava nas Configurações para importação automática, ou adicione manualmente abaixo.'
+    });
+
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao importar: ' + e.message });
+  }
+});
+
 module.exports = router;

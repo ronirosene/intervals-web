@@ -85,4 +85,53 @@ router.put('/settings', async (req, res) => {
   }
 });
 
+// ===================== STRAVA OAUTH =====================
+
+// Iniciar fluxo OAuth do Strava
+router.get('/strava/connect', async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ error: 'Não autorizado' });
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+    const clientId = process.env.STRAVA_CLIENT_ID || '';
+    if (!clientId) return res.status(500).json({ error: 'Strava Client ID não configurado no servidor' });
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/strava/callback`;
+    const url = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all&state=${decoded.userId}`;
+    res.json({ url });
+  } catch { res.status(401).json({ error: 'Token inválido' }); }
+});
+
+// Callback OAuth do Strava
+router.get('/strava/callback', async (req, res) => {
+  const { code, state: userId } = req.query;
+  if (!code || !userId) return res.status(400).send('Erro na autenticação do Strava. Código ausente.');
+
+  try {
+    const clientId = process.env.STRAVA_CLIENT_ID || '';
+    const clientSecret = process.env.STRAVA_CLIENT_SECRET || '';
+
+    const tokenResp = await fetch('https://www.strava.com/api/v3/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const tokenData = await tokenResp.json();
+    if (!tokenData.access_token) return res.status(500).send('Erro ao obter token do Strava.');
+
+    await query(
+      'UPDATE users SET strava_client_id = $1, strava_client_secret = $2, strava_refresh_token = $3 WHERE id = $4',
+      [clientId, clientSecret, tokenData.refresh_token, userId]
+    );
+
+    res.send(`<!DOCTYPE html><html><body><script>window.opener.postMessage('strava_connected', '*');window.close();</script><p>✅ Strava conectado! Feche esta janela.</p></body></html>`);
+  } catch (e) {
+    res.status(500).send('Erro ao conectar com Strava: ' + e.message);
+  }
+});
+
 module.exports = router;

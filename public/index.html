@@ -186,6 +186,34 @@
             <button class="btn btn-primary" onclick="syncActivities()">🔄 Sincronizar do Intervals.icu</button>
             <button class="btn btn-outline" onclick="loadDashboard()">🔄 Atualizar Painel</button>
           </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
+            <!-- Manual Activity -->
+            <div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">
+              <h3 style="color:#38bdf8; font-size:0.9rem; margin-bottom:8px">✍️ Adicionar Corrida Manual</h3>
+              <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Data</label><input type="date" id="manual-date" style="font-size:0.8rem; padding:6px"></div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Distância (km)</label><input type="number" id="manual-dist" step="0.01" style="font-size:0.8rem; padding:6px"></div>
+                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Duração (min)</label><input type="number" id="manual-min" step="0.5" style="font-size:0.8rem; padding:6px"></div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">FC média (opc)</label><input type="number" id="manual-hr" style="font-size:0.8rem; padding:6px"></div>
+                <div class="form-group" style="margin-bottom:6px"><label style="font-size:0.75rem">Anotações</label><input type="text" id="manual-notes" placeholder="ex: Treino leve" style="font-size:0.8rem; padding:6px"></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:0.8rem; margin-top:4px" onclick="addManualActivity()">➕ Adicionar</button>
+              <div id="manual-result" style="margin-top:6px"></div>
+            </div>
+
+            <!-- Strava Link Import -->
+            <div style="background:rgba(15,23,42,0.6); border-radius:8px; padding:16px">
+              <h3 style="color:#38bdf8; font-size:0.9rem; margin-bottom:8px">🔗 Importar do Strava por Link</h3>
+              <p style="color:#94a3b8; font-size:0.7rem; margin-bottom:6px">Cole o link da sua atividade do Strava</p>
+              <div class="form-group" style="margin-bottom:6px"><input type="text" id="strava-link" placeholder="https://www.strava.com/activities/..." style="font-size:0.8rem; padding:6px"></div>
+              <button class="btn btn-primary" style="width:100%; padding:6px; font-size:0.8rem" onclick="importStravaLink()">📥 Importar</button>
+              <div id="strava-link-result" style="margin-top:6px"></div>
+            </div>
+          </div>
+
           <div id="dashboard-content">
             <p style="color:#94a3b8">Clique em "Sincronizar" para buscar suas atividades recentes do Intervals.icu.</p>
           </div>
@@ -394,11 +422,18 @@
           <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id"></div>
 
           <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">🏃 Strava</h3>
-          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Conecte sua conta Strava para importar atividades automaticamente.<br>
-          Crie um app em <a href="https://www.strava.com/settings/api" target="_blank" style="color:#38bdf8">strava.com/settings/api</a> e cole os dados abaixo.</p>
-          <div class="form-group"><label>Strava Client ID</label><input type="text" id="set-strava-id"></div>
-          <div class="form-group"><label>Strava Client Secret</label><input type="password" id="set-strava-secret"></div>
-          <div class="form-group"><label>Strava Refresh Token</label><input type="text" id="set-strava-refresh"></div>
+          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Conecte sua conta Strava para importar atividades automaticamente.</p>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px">
+            <div class="form-group" style="margin-bottom:0"><label>Strava Client ID</label><input type="text" id="set-strava-id"></div>
+            <div class="form-group" style="margin-bottom:0"><label>Strava Client Secret</label><input type="password" id="set-strava-secret"></div>
+          </div>
+          <div class="form-group"><label>Strava Refresh Token</label>
+            <div style="display:flex; gap:8px">
+              <input type="text" id="set-strava-refresh" style="flex:1">
+              <button class="btn btn-outline" style="padding:6px 12px; font-size:0.75rem; white-space:nowrap" onclick="connectStrava()">🔗 Conectar</button>
+            </div>
+          </div>
 
           <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">📂 Importar CSV do Strava</h3>
           <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Baixe seus dados em <a href="https://www.strava.com/athlete/export" target="_blank" style="color:#38bdf8">strava.com/athlete/export</a> e faça upload do arquivo activities.csv.</p>
@@ -494,6 +529,7 @@
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
         document.getElementById('goal-date').value = d.toISOString().split('T')[0];
+        document.getElementById('manual-date').value = new Date().toISOString().split('T')[0];
       } catch { logout(); }
     }
 
@@ -719,6 +755,77 @@
         const res = await api('/data/sync-activities', 'POST', { days: 30 });
         toast(`${res.total} atividades importadas do Intervals.icu!`);
         loadDashboard();
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== MANUAL ACTIVITY =====================
+
+    async function addManualActivity() {
+      const date = document.getElementById('manual-date').value;
+      const dist = parseFloat(document.getElementById('manual-dist').value);
+      const min = parseFloat(document.getElementById('manual-min').value) || 0;
+      const hr = parseInt(document.getElementById('manual-hr').value) || 0;
+      const notes = document.getElementById('manual-notes').value;
+
+      if (!date) return toast('Selecione a data!', true);
+      if (!dist || dist <= 0) return toast('Informe a distância!', true);
+      if (min <= 0) return toast('Informe a duração!', true);
+
+      document.getElementById('manual-result').innerHTML = '<div style="color:#38bdf8; font-size:0.8rem">Registrando...</div>';
+      try {
+        const res = await api('/data/manual-activity', 'POST', { date, distanceKm: dist, minutes: Math.floor(min), seconds: Math.round((min % 1) * 60), heartRate: hr || null, notes });
+        document.getElementById('manual-result').innerHTML = `<div style="color:#22c55e; font-size:0.8rem">✅ ${res.message}</div>`;
+        toast('Corrida registrada!');
+        loadDashboard();
+        // Limpa campos
+        document.getElementById('manual-dist').value = '';
+        document.getElementById('manual-min').value = '';
+        document.getElementById('manual-hr').value = '';
+        document.getElementById('manual-notes').value = '';
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== STRAVA LINK =====================
+
+    async function importStravaLink() {
+      const url = document.getElementById('strava-link').value.trim();
+      if (!url) return toast('Cole o link da atividade do Strava', true);
+
+      document.getElementById('strava-link-result').innerHTML = '<div style="color:#38bdf8; font-size:0.8rem">Importando...</div>';
+      try {
+        const res = await api('/data/strava-import-link', 'POST', { url });
+        if (res.manual) {
+          // Sem API configurada - mostra hint
+          document.getElementById('strava-link-result').innerHTML =
+            `<div style="color:#fbbf24; font-size:0.8rem">${res.message}<br>${res.hint}</div>`;
+        } else {
+          document.getElementById('strava-link-result').innerHTML =
+            `<div style="color:#22c55e; font-size:0.8rem">✅ ${res.message}</div>`;
+          toast('Atividade importada do Strava!');
+          loadDashboard();
+          document.getElementById('strava-link').value = '';
+        }
+      } catch (e) {
+        document.getElementById('strava-link-result').innerHTML =
+          `<div style="color:#ef4444; font-size:0.8rem">${e.message}</div>`;
+      }
+    }
+
+    // ===================== STRAVA CONNECT =====================
+
+    async function connectStrava() {
+      try {
+        const res = await api('/auth/strava/connect');
+        if (res.url) {
+          window.open(res.url, 'strava_auth', 'width=600,height=700');
+          // Escuta retorno
+          window.addEventListener('message', (e) => {
+            if (e.data === 'strava_connected') {
+              toast('✅ Strava conectado!');
+              loadDashboard();
+            }
+          });
+        }
       } catch (e) { toast(e.message, true); }
     }
 
