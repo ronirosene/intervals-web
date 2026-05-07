@@ -192,6 +192,7 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
 
 // Gera descrição textual detalhada igual ao workout_doc
 function buildDetailedDescription(name, typeTag, zones, durationSec) {
+  if (!durationSec || durationSec <= 0) return `🏃‍♂️ ${name}\n🎯 Descanso ou recuperação ativa`;
   const easy = zones.easy || { min: 360, max: 420 };
   const marathon = zones.marathon || { min: 330, max: 360 };
   const threshold = zones.threshold || { min: 300, max: 330 };
@@ -483,12 +484,13 @@ async function syncToCalendar(plan, client) {
         moving_time: w.moving_time,
       };
       if (w.workout_doc) {
-        // Usa sintaxe de descrição do Intervals.icu + workout_doc vazio para acionar o parser server-side
+        // Só a sintaxe na description, sem texto misturado — o parser do Intervals.icu interpreta as linhas com "- "
         const syntax = stepsToIntervalsSyntax(w.workout_doc.steps);
         if (syntax) {
-          eventData.description = syntax + '\n\n' + (w.description || '');
+          eventData.description = syntax + '\n\n💡 ' + (w.name || '');
         }
-        eventData.workout_doc = '{}';
+        // Objeto vazio sinaliza "parseie a description como workout syntax"
+        eventData.workout_doc = {};
       }
       await client.events.createEvent(eventData);
       created++;
