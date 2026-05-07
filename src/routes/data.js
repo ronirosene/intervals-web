@@ -504,82 +504,93 @@ router.get('/evolution', auth, async (req, res) => {
 
 // Criar plano com meta
 router.post('/goal-plans', auth, async (req, res) => {
-  const { planName, distanceKm, targetTimeSeconds, targetDate, targetPace } = req.body;
+  try {
+    const { planName, distanceKm, targetTimeSeconds, targetDate, targetPace } = req.body;
 
-  if (!distanceKm || !targetDate) {
-    return res.status(400).json({ error: 'Distância e data alvo são obrigatórios' });
-  }
-
-  const distOptions = [5, 10, 21.1, 42.2];
-  const closest = distOptions.reduce((prev, curr) => Math.abs(curr - distanceKm) < Math.abs(prev - distanceKm) ? curr : prev);
-  const actualDist = closest;
-
-  const d1 = new Date();
-  const d2 = new Date(targetDate);
-  const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
-  const weeks = Math.max(12, Math.min(52, Math.round(diffDays / 7)));
-
-  const targetPaceValue = targetPace || (targetTimeSeconds / actualDist);
-  const actualTimeSeconds = targetTimeSeconds || (targetPaceValue * actualDist);
-
-  const userResult = await query('SELECT name FROM users WHERE id = $1', [req.userId]);
-  const userProfile = userResult.rows[0];
-
-  // Busca o condicionamento atual do atleta para basear as zonas de treino
-  let current5kPace = null;
-  const recentRuns = await query(
-    `SELECT * FROM activity_log WHERE user_id = $1 AND type IN ('Run','TrailRun','VirtualRun') AND distance > 0 AND moving_time > 0 ORDER BY start_date DESC LIMIT 50`,
-    [req.userId]
-  );
-  if (recentRuns.rows.length >= 3) {
-    // Mapeia colunas do banco para o formato esperado pelo analyzeRuns
-    const mapped = recentRuns.rows.map(r => ({
-      ...r,
-      start_date_local: r.start_date,
-      average_heartrate: r.avg_hr,
-    }));
-    const analysis = analyzeRuns(mapped);
-    current5kPace = analysis.best5k ? analysis.best5k.pace : analysis.avgPace;
-  }
-  if (!current5kPace) {
-    const lastActivity = await query(
-      'SELECT best_5k_pace, avg_pace FROM activities WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
-      [req.userId]
-    );
-    if (lastActivity.rows.length > 0) {
-      current5kPace = lastActivity.rows[0].best_5k_pace || lastActivity.rows[0].avg_pace;
+    if (!distanceKm || !targetDate) {
+      return res.status(400).json({ error: 'Distância e data alvo são obrigatórios' });
     }
+
+    const distOptions = [5, 10, 21.1, 42.2];
+    const closest = distOptions.reduce((prev, curr) => Math.abs(curr - distanceKm) < Math.abs(prev - distanceKm) ? curr : prev);
+    const actualDist = closest;
+
+    const d1 = new Date();
+    const d2 = new Date(targetDate);
+    const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+    const weeks = Math.max(12, Math.min(52, Math.round(diffDays / 7)));
+
+    const targetPaceValue = targetPace || (targetTimeSeconds / actualDist);
+    const actualTimeSeconds = targetTimeSeconds || (targetPaceValue * actualDist);
+
+    const userResult = await query('SELECT name FROM users WHERE id = $1', [req.userId]);
+    const userProfile = userResult.rows[0];
+
+    // Busca o condicionamento atual do atleta para basear as zonas de treino
+    let current5kPace = null;
+    try {
+      const recentRuns = await query(
+        `SELECT * FROM activity_log WHERE user_id = $1 AND type IN ('Run','TrailRun','VirtualRun') AND distance > 0 AND moving_time > 0 ORDER BY start_date DESC LIMIT 50`,
+        [req.userId]
+      );
+      if (recentRuns.rows.length >= 3) {
+        const mapped = recentRuns.rows.map(r => ({
+          ...r,
+          start_date_local: r.start_date,
+          average_heartrate: r.avg_hr,
+        }));
+        const analysis = analyzeRuns(mapped);
+        current5kPace = analysis.best5k ? analysis.best5k.pace : analysis.avgPace;
+      }
+    } catch (e) {
+      console.error('Erro ao buscar activity_log:', e.message);
+    }
+    if (!current5kPace) {
+      try {
+        const lastActivity = await query(
+          'SELECT best_5k_pace, avg_pace FROM activities WHERE user_id = $1 ORDER BY id DESC LIMIT 1',
+          [req.userId]
+        );
+        if (lastActivity.rows.length > 0) {
+          current5kPace = lastActivity.rows[0].best_5k_pace || lastActivity.rows[0].avg_pace;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar activities:', e.message);
+      }
+    }
+    if (!current5kPace) current5kPace = 300;
+
+    const { plan, summary } = generateGoalPlan({
+      distanceKm: actualDist,
+      targetTimeSeconds: actualTimeSeconds,
+      targetDate,
+      weeks,
+      planName: planName || `Plano ${actualDist}km`,
+      current5kPace,
+    });
+
+    const result = await query(
+      `INSERT INTO goal_plans (user_id, plan_name, distance_km, target_time_seconds, target_pace, target_date, weeks, plan_data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [req.userId, planName || `Plano ${actualDist}km`, actualDist, actualTimeSeconds, targetPaceValue, targetDate, weeks, JSON.stringify({ plan, summary })]
+    );
+
+    await query(
+      `INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, goal_plan_id, current_week)
+       VALUES ($1, $2, $3, $4, $5, 1)`,
+      [req.userId, planName || `Plano ${actualDist}km`, weeks, JSON.stringify({ plan, zones: summary, best5kPace: null, target5kPace: targetPaceValue }), result.rows[0].id]
+    );
+
+    res.json({
+      message: 'Plano com meta criado!',
+      goalPlanId: result.rows[0].id,
+      plan,
+      summary
+    });
+  } catch (e) {
+    console.error('Erro no goal-plans:', e);
+    res.status(500).json({ error: 'Erro interno do servidor', details: e.message });
   }
-  if (!current5kPace) current5kPace = 300; // fallback: 5:00/km
-
-  const { plan, summary } = generateGoalPlan({
-    distanceKm: actualDist,
-    targetTimeSeconds: actualTimeSeconds,
-    targetDate,
-    weeks,
-    planName: planName || `Plano ${actualDist}km`,
-    current5kPace,
-  });
-
-  const result = await query(
-    `INSERT INTO goal_plans (user_id, plan_name, distance_km, target_time_seconds, target_pace, target_date, weeks, plan_data)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [req.userId, planName || `Plano ${actualDist}km`, actualDist, actualTimeSeconds, targetPaceValue, targetDate, weeks, JSON.stringify({ plan, summary })]
-  );
-
-  // Salva também como training_plan para compatibilidade com sync
-  await query(
-    `INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, goal_plan_id, current_week)
-     VALUES ($1, $2, $3, $4, $5, 1)`,
-    [req.userId, planName || `Plano ${actualDist}km`, weeks, JSON.stringify({ plan, zones: summary, best5kPace: null, target5kPace: targetPaceValue }), result.rows[0].id]
-  );
-
-  res.json({
-    message: 'Plano com meta criado!',
-    goalPlanId: result.rows[0].id,
-    plan,
-    summary
-  });
 });
 
 // Listar goal plans
