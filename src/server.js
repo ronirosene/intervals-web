@@ -6,6 +6,7 @@ const { query } = require('./db/pg');
 
 const authRoutes = require('./routes/auth');
 const dataRoutes = require('./routes/data');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +68,7 @@ async function initDb() {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));

@@ -43,6 +43,25 @@
     .faq-item .faq-q { font-weight: 600; color: #38bdf8; }
     .faq-item .faq-a { margin-top: 8px; color: #94a3b8; display: none; line-height: 1.6; }
     .faq-item.open .faq-a { display: block; }
+    /* Chat */
+    .chat-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #38bdf8, #818cf8); border: none; color: #0f172a; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 20px rgba(56,189,248,0.4); z-index: 999; transition: 0.3s; }
+    .chat-btn:hover { transform: scale(1.1); }
+    .chat-widget { position: fixed; bottom: 90px; right: 24px; width: 340px; max-height: 460px; background: #1e293b; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 999; display: none; flex-direction: column; overflow: hidden; }
+    .chat-widget.open { display: flex; }
+    .chat-header { padding: 14px 16px; background: linear-gradient(135deg, #1e293b, #334155); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header span { font-weight: 600; color: #38bdf8; }
+    .chat-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
+    .chat-messages { flex: 1; padding: 12px; overflow-y: auto; max-height: 320px; }
+    .chat-msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 12px; max-width: 85%; font-size: 0.85rem; line-height: 1.5; }
+    .chat-msg.user { background: #38bdf8; color: #0f172a; margin-left: auto; border-bottom-right-radius: 4px; }
+    .chat-msg.ai { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; border-bottom-left-radius: 4px; }
+    .chat-msg.ai .ai-badge { font-size: 0.65rem; background: #38bdf8; color:#0f172a; padding:1px 5px; border-radius:3px; margin-right:4px; }
+    .chat-input-area { display: flex; padding: 10px; gap: 8px; border-top: 1px solid #334155; background: #0f172a; }
+    .chat-input-area input { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 20px; color: #e2e8f0; font-size: 0.85rem; outline: none; }
+    .chat-input-area input:focus { border-color: #38bdf8; }
+    .chat-input-area button { background: #38bdf8; border: none; border-radius: 50%; width: 32px; height: 32px; color: #0f172a; cursor: pointer; font-size: 1rem; }
+    .chat-input-area button:disabled { opacity: 0.4; }
+    .chat-welcome { color: #94a3b8; font-size: 0.8rem; padding: 16px; text-align: center; }
     .stat-detailed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .stat-detailed div { padding: 8px; background: #0f172a; border-radius: 4px; text-align: center; }
     .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
@@ -212,6 +231,22 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- Chat widget -->
+  <button class="chat-btn" id="chat-btn" onclick="toggleChat()">💬</button>
+  <div class="chat-widget" id="chat-widget">
+    <div class="chat-header">
+      <span>🤖 Assistente de Treino</span>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-welcome">👋 Olá! Sou seu assistente de corrida.<br>Pergunte sobre treinos, planos ou como usar o sistema!</div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Digite sua dúvida..." onkeydown="if(event.key==='Enter') sendChat()">
+      <button onclick="sendChat()" id="chat-send">➤</button>
+    </div>
+  </div>
+
   <script>
     let token = localStorage.getItem('token');
     let lastUploadAnalysis = null;
@@ -379,6 +414,41 @@
         await api('/auth/settings', 'PUT', { intervals_api_key: document.getElementById('set-api-key').value, intervals_athlete_id: document.getElementById('set-athlete-id').value });
         toast('Configurações salvas!');
       } catch (e) { toast(e.message, true); }
+    }
+
+    // Chat
+    function toggleChat() {
+      document.getElementById('chat-widget').classList.toggle('open');
+      if (document.getElementById('chat-widget').classList.contains('open')) {
+        document.getElementById('chat-input').focus();
+      }
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const msgs = document.getElementById('chat-messages');
+      msgs.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
+      input.value = '';
+      msgs.scrollTop = msgs.scrollHeight;
+
+      document.getElementById('chat-send').disabled = true;
+      try {
+        const res = await api('/chat', 'POST', { message: msg });
+        msgs.innerHTML += `<div class="chat-msg ai"><span class="ai-badge">IA</span>${escapeHtml(res.response)}</div>`;
+      } catch {
+        msgs.innerHTML += `<div class="chat-msg ai" style="color:#ef4444">Desculpe, não consegui responder agora. Tente novamente!</div>`;
+      }
+      document.getElementById('chat-send').disabled = false;
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
     }
 
     initApp();
