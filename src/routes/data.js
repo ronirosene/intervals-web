@@ -149,7 +149,10 @@ router.post('/sync-activities', auth, async (req, res) => {
 
   try {
     const client = new IntervalsClient({ apiKey: u.intervals_api_key, athleteId: u.intervals_athlete_id });
-    const activities = await client.activities.listActivities();
+    // Busca atividades dos últimos 60 dias
+    const oldest = new Date();
+    oldest.setDate(oldest.getDate() - 60);
+    const activities = await client.activities.listActivities({ oldest: oldest.toISOString().split('T')[0], resolve: true });
     const runs = activities.filter(a => ['Run', 'TrailRun', 'VirtualRun'].includes(a.type));
 
     // Pega só os últimos N dias
@@ -165,7 +168,7 @@ router.post('/sync-activities', auth, async (req, res) => {
           `INSERT INTO activity_log (user_id, intervals_activity_id, name, type, distance, moving_time, avg_pace, avg_hr, start_date, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            ON CONFLICT (intervals_activity_id) DO NOTHING`,
-          [req.userId, a.id, a.name, a.type, a.distance, a.moving_time, pace, a.avg_heart_rate, a.start_date, a.description || '']
+          [req.userId, a.id, a.name, a.type, a.distance, a.moving_time, pace, a.average_heartrate, a.start_date, a.description || '']
         );
         imported++;
       } catch (e) {
@@ -180,7 +183,7 @@ router.post('/sync-activities', auth, async (req, res) => {
 
     res.json({ message: `${imported} atividades importadas`, total: imported, avgPace, totalDist, totalTime });
   } catch (e) {
-    res.status(500).json({ error: 'Erro ao sincronizar atividades', details: e.message });
+    res.status(500).json({ error: 'Erro ao sincronizar atividades: ' + e.message });
   }
 });
 
