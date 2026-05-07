@@ -252,7 +252,59 @@
 
       <!-- FAQ -->
       <div id="faq" class="hidden">
-        <div class="card"><h2>❓ FAQ — Como funciona o plano de treino?</h2>
+        <div class="card"><h2>❓ FAQ — Como funciona o sistema?</h2>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">📊 O que tem no Dashboard?</div>
+            <div class="faq-a">O Dashboard reúne tudo que você precisa pra acompanhar sua evolução:<br><br>
+            • <strong>Última Atividade:</strong> mostra a corrida mais recente importada do Intervals.icu, com distância, ritmo e duração.<br>
+            • <strong>Planejado vs Realizado:</strong> compara o último treino do seu plano com o que você realmente fez.<br>
+            • <strong>Próximo Treino:</strong> prévia do próximo treino agendado no seu plano ativo.<br>
+            • <strong>Nível de Confiança:</strong> velocímetro de 0 a 100 baseado na sua consistência (frequência e volume dos últimos 30 dias). Quanto mais regular, maior a confiança de bater sua meta!<br>
+            • <strong>Meta Ativa:</strong> se você criou um Plano por Meta, ele aparece aqui com distância, ritmo alvo e data da prova.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">🔄 Como funciona a sincronia em tempo real com o Intervals.icu?</div>
+            <div class="faq-a">Você não precisa mais exportar arquivos toda vez! No Dashboard, clique em <strong>"Sincronizar do Intervals.icu"</strong> e o sistema busca automaticamente suas atividades recentes (até 60 dias) usando sua API Key.<br><br>
+            As atividades são armazenadas no banco de dados e usadas para:<br>
+            • Alimentar o Dashboard com sua última corrida<br>
+            • Calcular seu Nível de Confiança<br>
+            • Comparar treinos planejados vs realizados<br><br>
+            <strong>Pré-requisito:</strong> Ter a API Key e Athlete ID configurados em ⚙️ Configurações.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">🎯 Como criar um Plano por Meta (5k, 10k, 21k, 42k)?</div>
+            <div class="faq-a">Na aba <strong>"Plano por Meta"</strong> você pode criar um plano de treino personalizado para qualquer distância:<br><br>
+            <strong>Passo a passo:</strong><br>
+            1. Escolha a <strong>distância</strong>: 5km, 10km, 21km (Meia Maratona) ou 42km (Maratona)<br>
+            2. Defina seu <strong>tempo alvo</strong> (ex: 25 min para 5km)<br>
+            3. Selecione a <strong>data da prova</strong> (mínimo 3 meses de preparação)<br>
+            4. Clique em "Gerar Plano para Meta"<br><br>
+            O sistema calcula automaticamente:<br>
+            • <strong>Duração ideal</strong> do plano (entre 12 e 52 semanas)<br>
+            • <strong>4 fases de periodização:</strong> Base → Build → Race Prep → Taper<br>
+            • <strong>Zonas de treino</strong> baseadas no seu pace alvo<br>
+            • Treinos específicos: intervalos, tempo runs, long runs progressivos<br><br>
+            O plano gerado também aparece na aba "Planos" e pode ser sincronizado com o Intervals.icu.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">📈 Como funciona o Nível de Confiança?</div>
+            <div class="faq-a">O velocímetro de confiança (0-100) avalia suas chances de bater a meta com base nos <strong>últimos 30 dias de treinos</strong>:<br><br>
+            • <strong>Frequência (0-40 pts):</strong> quantas corridas você fez no mês (ideal: 12+ corridas)<br>
+            • <strong>Volume (0-40 pts):</strong> sua média semanal em km (ideal: 25km+/semana)<br>
+            • <strong>Consistência (0-20 pts):</strong> há quantas semanas você está treinando regularmente<br><br>
+            <strong>Cores:</strong><br>
+            🔴 <strong>0-39:</strong> Baixo — precisa treinar com mais regularidade<br>
+            🟡 <strong>40-69:</strong> Médio — está no caminho certo, continue evoluindo<br>
+            🟢 <strong>70-100:</strong> Alto — ótima consistência! Vai conseguir bater sua meta!
+            </div>
+          </div>
 
           <div class="faq-item" onclick="this.classList.toggle('open')">
             <div class="faq-q">📐 Como o algoritmo calcula meu pace ideal?</div>
@@ -292,7 +344,8 @@
             <div class="faq-a">1. Vá em <strong>Configurações</strong> e preencha sua <strong>API Key</strong> e <strong>Athlete ID</strong> (encontrados em Settings > Developer Settings no Intervals.icu).<br>
             2. Após gerar um plano, clique em <strong>"Sincronizar"</strong> ao lado dele na aba Planos.<br>
             3. O sistema limpa seus treinos futuros e insere o novo plano automaticamente.<br>
-            4. Abra seu relógio Garmin e sincronize — os treinos aparecem no calendário!
+            4. Abra seu relógio Garmin e sincronize — os treinos aparecem no calendário!<br><br>
+            💡 <strong>Dica:</strong> use o botão "Sincronizar do Intervals.icu" no Dashboard para importar atividades em tempo real sem precisar de arquivo.
             </div>
           </div>
 
@@ -304,6 +357,18 @@
             • <strong>Semana 3:</strong> 35 min de trote contínuo leve<br>
             • <strong>Semana 4 (recup):</strong> 30 min leve<br><br>
             O número de dias por semana é personalizável (recomendado: 3x/semana).
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">💬 Como funciona o Chat com IA?</div>
+            <div class="faq-a">Clique no botão 💬 no canto inferior direito para abrir o assistente virtual.<br><br>
+            Você pode perguntar sobre:<br>
+            • Dúvidas sobre treinos e periodização<br>
+            • Como usar o sistema<br>
+            • Significado das zonas de treino<br>
+            • Dicas de corrida<br><br>
+            O assistente usa IA (Gemini) para responder de forma natural e em português.
             </div>
           </div>
         </div>
