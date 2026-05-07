@@ -376,4 +376,50 @@ router.get('/goal-plans', auth, async (req, res) => {
   res.json({ plans });
 });
 
+// Detalhes de um plano específico
+router.get('/plan/:id', auth, async (req, res) => {
+  const { id } = req.params;
+  const result = await query('SELECT * FROM training_plans WHERE id = $1 AND user_id = $2', [id, req.userId]);
+  if (!result.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
+  const p = result.rows[0];
+  const planData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
+  res.json({ plan: { ...p, plan_data: planData } });
+});
+
+// Upload CSV Strava
+router.post('/upload-strava-csv', auth, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Arquivo CSV não enviado' });
+  try {
+    const fs = require('fs');
+    const csvContent = fs.readFileSync(req.file.path, 'utf8');
+    const lines = csvContent.split('\n');
+    const headers = lines[0].split(',');
+    let imported = 0;
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = lines[i].split(',');
+      const row = {};
+      headers.forEach((h, idx) => row[h.trim()] = (vals[idx] || '').trim());
+      if (row['Activity Type'] && ['Run', 'TrailRun', 'VirtualRun'].includes(row['Activity Type'])) {
+        const dist = parseFloat(row['Distance']) || 0;
+        const time = parseFloat(row['Elapsed Time']) || parseFloat(row['Moving Time']) || 0;
+        const pace = dist > 0 && time > 0 ? time / dist : 0;
+        try {
+          await query(
+            `INSERT INTO activity_log (user_id, intervals_activity_id, name, type, distance, moving_time, avg_pace, avg_hr, start_date, description)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (intervals_activity_id) DO NOTHING`,
+            [req.userId, 'strava_' + i + '_' + Date.now(), row['Activity Name'] || 'Strava Run', row['Activity Type'], dist * 1000, time, pace, parseFloat(row['Average Heart Rate']) || 0, row['Activity Date'] || new Date().toISOString(), row['Activity Description'] || '']
+          );
+          imported++;
+        } catch {}
+      }
+    }
+    fs.unlinkSync(req.file.path);
+    res.json({ message: `${imported} atividades importadas do Strava`, total: imported });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao importar CSV: ' + e.message });
+  }
+});
+
 module.exports = router;

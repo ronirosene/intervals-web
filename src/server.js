@@ -26,6 +26,9 @@ async function initDb() {
         intervals_api_key TEXT,
         intervals_athlete_id TEXT,
         target_5k_time INTEGER DEFAULT 1140,
+        strava_client_id TEXT,
+        strava_client_secret TEXT,
+        strava_refresh_token TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

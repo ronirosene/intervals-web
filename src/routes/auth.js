@@ -55,7 +55,7 @@ router.get('/me', async (req, res) => {
   try {
     const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
     const result = await query(
-      'SELECT id, name, email, intervals_api_key, intervals_athlete_id, target_5k_time FROM users WHERE id = $1',
+      'SELECT id, name, email, intervals_api_key, intervals_athlete_id, strava_client_id, strava_client_secret, strava_refresh_token, target_5k_time FROM users WHERE id = $1',
       [decoded.userId]
     );
     const user = result.rows[0];
@@ -72,11 +72,11 @@ router.put('/settings', async (req, res) => {
 
   try {
     const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
-    const { intervals_api_key, intervals_athlete_id, target_5k_time } = req.body;
+    const { intervals_api_key, intervals_athlete_id, target_5k_time, strava_client_id, strava_client_secret, strava_refresh_token } = req.body;
 
     await query(
-      'UPDATE users SET intervals_api_key = $1, intervals_athlete_id = $2, target_5k_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
-      [intervals_api_key || null, intervals_athlete_id || null, target_5k_time || 1140, decoded.userId]
+      'UPDATE users SET intervals_api_key = $1, intervals_athlete_id = $2, target_5k_time = $3, strava_client_id = $4, strava_client_secret = $5, strava_refresh_token = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7',
+      [intervals_api_key || null, intervals_athlete_id || null, target_5k_time || 1140, strava_client_id || null, strava_client_secret || null, strava_refresh_token || null, decoded.userId]
     );
 
     res.json({ message: 'Configurações atualizadas' });

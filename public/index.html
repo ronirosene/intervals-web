@@ -250,6 +250,18 @@
         <div class="card"><h2>📅 Meus Planos Salvos</h2><div id="plans-list">Carregando...</div></div>
       </div>
 
+      <!-- Detalhes do Plano -->
+      <div id="plan-detail" class="hidden">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+            <h2 id="pd-title" style="margin:0">📋 Detalhes do Plano</h2>
+            <button class="btn btn-outline" onclick="closePlanDetail()">✕ Fechar</button>
+          </div>
+          <div id="pd-summary" style="margin-bottom:16px"></div>
+          <div id="pd-workouts" style="max-height:500px; overflow-y:auto"></div>
+        </div>
+      </div>
+
       <!-- FAQ -->
       <div id="faq" class="hidden">
         <div class="card"><h2>❓ FAQ — Como funciona o sistema?</h2>
@@ -377,9 +389,24 @@
       <!-- Configurações -->
       <div id="settings" class="hidden">
         <div class="card"><h2>⚙️ Configurações</h2>
+          <h3 style="color:#38bdf8; font-size:0.95rem; margin-bottom:12px">🔗 Intervals.icu</h3>
           <div class="form-group"><label>Intervals API Key</label><input type="text" id="set-api-key"></div>
           <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id"></div>
-          <button class="btn btn-primary" onclick="saveSettings()">Salvar</button>
+
+          <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">🏃 Strava</h3>
+          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Conecte sua conta Strava para importar atividades automaticamente.<br>
+          Crie um app em <a href="https://www.strava.com/settings/api" target="_blank" style="color:#38bdf8">strava.com/settings/api</a> e cole os dados abaixo.</p>
+          <div class="form-group"><label>Strava Client ID</label><input type="text" id="set-strava-id"></div>
+          <div class="form-group"><label>Strava Client Secret</label><input type="password" id="set-strava-secret"></div>
+          <div class="form-group"><label>Strava Refresh Token</label><input type="text" id="set-strava-refresh"></div>
+
+          <h3 style="color:#38bdf8; font-size:0.95rem; margin:16px 0 12px">📂 Importar CSV do Strava</h3>
+          <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:12px">Baixe seus dados em <a href="https://www.strava.com/athlete/export" target="_blank" style="color:#38bdf8">strava.com/athlete/export</a> e faça upload do arquivo activities.csv.</p>
+          <input type="file" id="strava-csv-input" accept=".csv" style="width:100%; padding:20px; border:2px dashed rgba(51,65,85,0.5); border-radius:8px; color:#94a3b8; cursor:pointer; background:rgba(15,23,42,0.4)">
+          <button class="btn btn-primary" style="margin-top:12px" onclick="uploadStravaCSV()">📊 Importar CSV</button>
+
+          <button class="btn btn-success" style="margin-top:20px; width:100%" onclick="saveSettings()">💾 Salvar Configurações</button>
+          <div id="settings-result" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
@@ -459,6 +486,9 @@
         document.getElementById('user-name').textContent = user.name;
         document.getElementById('set-api-key').value = user.intervals_api_key || '';
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
+        document.getElementById('set-strava-id').value = user.strava_client_id || '';
+        document.getElementById('set-strava-secret').value = user.strava_client_secret || '';
+        document.getElementById('set-strava-refresh').value = user.strava_refresh_token || '';
         loadPlans();
         loadDashboard();
         const d = new Date();
@@ -544,6 +574,7 @@
               ${worksoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(30,41,59,0.6)">' + worksoutsPreview + '</div>' : ''}
               <div class="actions">
                 <button class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">🔄 Sincronizar</button>
+                <button class="btn btn-primary" style="padding:4px 10px; font-size:0.8rem" onclick="showPlanDetail(${p.id})">📋 Ver Detalhes</button>
                 <button class="btn btn-danger" onclick="deletePlan(${p.id})">🗑️ Excluir</button>
               </div>
             </div>`;
@@ -570,7 +601,13 @@
 
     async function saveSettings() {
       try {
-        await api('/auth/settings', 'PUT', { intervals_api_key: document.getElementById('set-api-key').value, intervals_athlete_id: document.getElementById('set-athlete-id').value });
+        await api('/auth/settings', 'PUT', {
+          intervals_api_key: document.getElementById('set-api-key').value,
+          intervals_athlete_id: document.getElementById('set-athlete-id').value,
+          strava_client_id: document.getElementById('set-strava-id').value,
+          strava_client_secret: document.getElementById('set-strava-secret').value,
+          strava_refresh_token: document.getElementById('set-strava-refresh').value,
+        });
         toast('Configurações salvas!');
       } catch (e) { toast(e.message, true); }
     }
@@ -743,6 +780,88 @@
       const s = Math.floor(sec % 60);
       if (h > 0) return `${h}h${String(m).padStart(2,'0')}m${String(s).padStart(2,'0')}s`;
       return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    // ===================== STRAVA =====================
+
+    async function uploadStravaCSV() {
+      const file = document.getElementById('strava-csv-input').files[0];
+      if (!file) return toast('Selecione um arquivo CSV do Strava', true);
+      const form = new FormData();
+      form.append('file', file);
+      document.getElementById('settings-result').innerHTML = '<div style="color:#38bdf8">Importando...</div>';
+      try {
+        const res = await fetch('/api/data/upload-strava-csv', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form });
+        const data = await res.json();
+        if (!res.ok) return toast(data.error, true);
+        document.getElementById('settings-result').innerHTML = `<div class="summary-box">✅ ${data.message}</div>`;
+        toast(`${data.total} atividades importadas do Strava!`);
+      } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== PLAN DETAIL VIEW =====================
+
+    function showSectionWithId(id) {
+      document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
+      ['dashboard','upload','zeroplane','meta','plans','plan-detail','faq','settings'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.classList.toggle('hidden', s !== id);
+      });
+    }
+
+    function showPlanDetail(planId) {
+      showSectionWithId('plan-detail');
+      document.getElementById('pd-workouts').innerHTML = '<div style="color:#38bdf8">Carregando...</div>';
+      api('/data/plan/' + planId).then(res => {
+        const p = res.plan;
+        const pd = p.plan_data;
+        document.getElementById('pd-title').textContent = `📋 ${p.plan_name}`;
+        let summary = `<div class="stat-detailed">
+          <div><div class="val">${p.weeks} sem</div><div class="lbl">Duração</div></div>
+          <div><div class="val">${pd.plan ? pd.plan.length : 0}</div><div class="lbl">Treinos</div></div>
+          <div><div class="val">${new Date(p.created_at).toLocaleDateString('pt-BR')}</div><div class="lbl">Criado em</div></div>
+          <div><div class="val">${p.synced ? '✅' : '⏳'}</div><div class="lbl">Sincronizado</div></div>
+        </div>`;
+        if (pd.best5kPace) summary += `<div class="summary-box">🎯 Pace atual: ${formatPaceClient(pd.best5kPace * 60)} | Pace alvo: ${formatPaceClient(pd.target5kPace * 60)}</div>`;
+        if (pd.summary) {
+          const s = pd.summary;
+          summary += `<div class="summary-box">🎯 ${s.distanceKm}km em ${s.targetTime} — Ritmo: ${s.targetPace} — ${s.sessions} sessões</div>`;
+        }
+        document.getElementById('pd-summary').innerHTML = `
+          <div style="margin-bottom:12px"><button class="btn btn-primary" onclick="syncPlan(${p.id})">🔄 Sincronizar com Intervals.icu</button></div>
+          ${summary}`;
+
+        let html = '';
+        if (pd.plan) {
+          let currentWeek = 0;
+          pd.plan.forEach(w => {
+            if (w.week && w.week !== currentWeek) {
+              currentWeek = w.week;
+              html += `<div style="color:#38bdf8; font-weight:700; margin:16px 0 8px; padding:4px 0; border-bottom:1px solid rgba(56,189,248,0.3)">📅 Semana ${currentWeek}${w.phase ? ' — ' + w.phase : ''}</div>`;
+            }
+            const isRest = w.moving_time === 0 || (w.name && w.name.toLowerCase().includes('descanso'));
+            if (isRest) {
+              html += `<div class="plan-item" style="border-left-color:#64748b; opacity:0.6">
+                <div class="name">🛌 ${w.name}</div>
+                <div class="desc">${w.description ? escapeHtml(w.description).substring(0, 60) : 'Descanso'}</div>
+              </div>`;
+            } else {
+              const detailLines = (w.detailedPlan || w.description || '').split('\n').filter(l => l.trim());
+              html += `<div class="plan-item" style="border-left-color:#22c55e">
+                <div class="name">🏃 ${w.name} <span style="font-size:0.75rem; color:#64748b">📅 ${new Date(w.date).toLocaleDateString('pt-BR')} | ${Math.round(w.moving_time / 60)}min</span></div>
+                <div class="desc" style="margin-top:4px">${detailLines.map(l => `<div style="padding:2px 0; font-size:0.82rem">${escapeHtml(l)}</div>`).join('')}</div>
+              </div>`;
+            }
+          });
+        }
+        document.getElementById('pd-workouts').innerHTML = html;
+      }).catch(e => {
+        document.getElementById('pd-workouts').innerHTML = '<p style="color:#ef4444">Erro: ' + e.message + '</p>';
+      });
+    }
+
+    function closePlanDetail() {
+      showSectionWithId('plans');
     }
 
     // Chat

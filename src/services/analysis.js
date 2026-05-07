@@ -62,24 +62,18 @@ const STEPS = {
 };
 
 function buildWorkoutDoc(name, typeTag, zones, durationSec) {
-  // Convert paces from sec/km to min/km for Intervals format
-  const toMinKm = (s) => +(s / 60).toFixed(2);
-  const easyPace = toMinKm(zones.easy.max);
-  const marathonPace = toMinKm(zones.marathon.min);
-  const thresholdPace = toMinKm(zones.threshold.min);
-  const speedPace = toMinKm(zones.speed.min);
-  const warmPaceLow = toMinKm(zones.easy.min);
+  const easyPace = zones.easy ? (zones.easy.min + zones.easy.max) / 2 / 60 : 5.5;
+  const marathonPace = zones.marathon ? (zones.marathon.min + zones.marathon.max) / 2 / 60 : 5.0;
+  const thresholdPace = zones.threshold ? (zones.threshold.min + zones.threshold.max) / 2 / 60 : 4.5;
+  const speedPace = zones.speed ? (zones.speed.min + zones.speed.max) / 2 / 60 : 4.0;
 
-  const totalMin = Math.round(durationSec / 60);
-  const warmSec = Math.min(600, Math.round(durationSec * 0.3));
-  const coolSec = Math.min(600, Math.round(durationSec * 0.25));
-  const workSec = durationSec - warmSec - coolSec;
+  const warmSec = 600;
+  const coolSec = 300;
 
   let steps = [];
-
   switch (typeTag) {
     case 'easy': {
-      const runSec = Math.max(600, workSec);
+      const runSec = Math.max(600, durationSec);
       steps = [
         STEPS.warmup(300, easyPace + 1, easyPace + 1.5),
         STEPS.work(runSec, easyPace, marathonPace),
@@ -88,8 +82,8 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
       break;
     }
     case 'intervals': {
-      const reps = Math.max(4, Math.min(10, Math.floor(workSec / 300)));
-      const workRepSec = Math.floor(workSec / reps / 2);
+      const reps = Math.max(4, Math.min(10, Math.floor(durationSec / 300)));
+      const workRepSec = Math.floor(durationSec / reps / 2);
       const recRepSec = Math.max(90, Math.floor(workRepSec * 0.4));
       steps = [
         STEPS.warmup(warmSec, easyPace + 0.5, easyPace + 1),
@@ -102,7 +96,7 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
       break;
     }
     case 'tempo': {
-      const tempoSec = Math.max(600, workSec);
+      const tempoSec = Math.max(600, durationSec);
       steps = [
         STEPS.warmup(warmSec, easyPace + 0.5, easyPace + 1),
         STEPS.work(tempoSec, thresholdPace - 0.15, thresholdPace + 0.15),
@@ -111,7 +105,7 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
       break;
     }
     case 'strides': {
-      const easyRunSec = Math.max(600, workSec - 360);
+      const easyRunSec = Math.max(600, durationSec - 360);
       steps = [
         STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
         STEPS.repeat(6, [
@@ -125,7 +119,7 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
     }
     case 'long':
     case 'long-run': {
-      const runSec = Math.max(1800, workSec);
+      const runSec = Math.max(1800, durationSec);
       steps = [
         STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
         STEPS.work(runSec, easyPace, marathonPace),
@@ -140,7 +134,6 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
         const jogBlocks = Math.max(3, Math.floor(durationSec / 480));
         const jogSec = Math.floor(60);
         const walkSec = Math.floor(120);
-        const blockSec = (jogSec + walkSec) * jogBlocks;
         steps = [
           STEPS.warmup(300, easyPace + 1, easyPace + 2),
           STEPS.repeat(jogBlocks, [
@@ -149,14 +142,13 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
           ]),
           STEPS.cooldown(300, easyPace + 1.5, easyPace + 3),
         ];
-        // adjust total
       }
       break;
     }
     default: {
       steps = [
         STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
-        STEPS.work(workSec, easyPace, marathonPace),
+        STEPS.work(durationSec, easyPace, marathonPace),
         STEPS.cooldown(300, easyPace + 0.5, easyPace + 1.5),
       ];
     }
@@ -167,6 +159,42 @@ function buildWorkoutDoc(name, typeTag, zones, durationSec) {
     name: name,
     steps,
   };
+}
+
+// Gera descrição textual detalhada igual ao workout_doc
+function buildDetailedDescription(name, typeTag, zones, durationSec) {
+  const easy = zones.easy || { min: 360, max: 420 };
+  const marathon = zones.marathon || { min: 330, max: 360 };
+  const threshold = zones.threshold || { min: 300, max: 330 };
+  const speed = zones.speed || { min: 240, max: 270 };
+
+  const fp = (s) => formatPace(s * 60);
+  const min = (s) => Math.round(s / 60);
+
+  switch (typeTag) {
+    case 'easy':
+      return `🏃‍♂️ Corrida leve aeróbica\n📏 Aquecimento: 5min @ ${fp(easy.max * 1.1)}-${fp(easy.max * 1.2)}\n🎯 Principal: ${min(durationSec)}min @ ${fp(easy.min)}-${fp(easy.max)} (Z2)\n🏁 Desaquecimento: 5min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}`;
+    case 'intervals': {
+      const reps = Math.max(4, Math.min(10, Math.floor(durationSec / 300)));
+      const workSec = Math.floor(durationSec / reps / 2);
+      const recSec = Math.max(90, Math.floor(workSec * 0.4));
+      const workMin = Math.round(workSec / 60);
+      return `⚡ Treino de tiros (${reps}x)\n🔥 Aquecimento: 10min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}\n🎯 ${reps}x${workMin == 1 ? '400m' : workMin == 2 ? '800m' : workMin + 'min'} @ ${fp(speed.min)}-${fp(speed.max)} (recup ${Math.round(recSec / 60)}min trote @ ${fp(easy.min)}-${fp(easy.max)})\n🏁 Desaquecimento: 5min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}`;
+    }
+    case 'tempo': {
+      const tempoMin = Math.max(10, min(durationSec));
+      return `🔥 Treino de ritmo (Tempo Run)\n🔥 Aquecimento: 10min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}\n🎯 ${tempoMin}min @ ${fp(threshold.min)}-${fp(threshold.max)} (Z4)\n🏁 Desaquecimento: 5min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}`;
+    }
+    case 'strides':
+      return `⚡ Strides + Core\n🏃‍♂️ Aquecimento: 5min leve\n🎯 6x100m strides (30s rápido, 60s trote) @ ${fp(speed.min)}-${fp(speed.max)}\n🎯 Corrida leve: ${min(durationSec - 360)}min @ ${fp(easy.min)}-${fp(marathon.max)}\n🏁 Desaquecimento + core: 10min`;
+    case 'long':
+    case 'long-run':
+      return `🏃‍♂️ Corrida Longa\n🔥 Aquecimento: 5min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}\n🎯 ${min(durationSec)}min @ ${fp(easy.min)}-${fp(marathon.max)} (Z2-Z3)\n🏁 Desaquecimento: 5min @ ${fp(easy.max)}-${fp(easy.max * 1.1)}`;
+    case 'beginner':
+      return `🌱 Treino Iniciante\n🎯 ${min(durationSec)}min alternando trote + caminhada\n💡 Trote: ritmo confortável (@ ${fp(easy.min)}-${fp(easy.max)})\n💡 Caminhada: ritmo bem leve para recuperar o fôlego`;
+    default:
+      return `🏃‍♂️ ${name}\n🎯 ${min(durationSec)}min @ ${fp(easy.min)}-${fp(marathon.max)}`;
+  }
 }
 
 // ===================== ANALYSIS =====================
@@ -313,13 +341,16 @@ async function generatePlan(analysis, userProfile, weeks = 4, target5kMin = 19) 
         { name: userProfile.name },
         { ...d, target5k: formatTime(target5kMin * 60) }
       );
+      const detailedDesc = buildDetailedDescription(d.name, d.tag, zones, d.time);
+      const fullDesc = `${detailedDesc}\n\n💡 ${aiDesc}`;
 
       const entry = {
         name: d.name,
         date: current.toISOString().split('T')[0],
-        description: aiDesc,
+        description: fullDesc,
         type: 'Run',
         moving_time: d.isRest ? 0 : d.time,
+        detailedPlan: detailedDesc,
         workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, zones, d.time),
       };
 
@@ -376,11 +407,13 @@ async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
         { name: userProfile.name },
         { name, description: desc, moving_time: time }
       );
+      const detailedDesc = buildDetailedDescription(name, 'beginner', beginnerZones, time);
 
       plan.push({
         name,
         date: current.toISOString().split('T')[0],
-        description: aiDesc,
+        description: `${detailedDesc}\n\n💡 ${aiDesc}`,
+        detailedPlan: detailedDesc,
         type: 'Run',
         moving_time: time,
         workout_doc: buildWorkoutDoc(name, 'beginner', beginnerZones, time),
@@ -429,7 +462,7 @@ async function syncToCalendar(plan, client) {
   return { created, total: plan.length };
 }
 
-module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan, generateGoalPlan };
+module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan, generateGoalPlan, buildDetailedDescription };
 
 // ===================== GOAL-BASED PLAN GENERATOR =====================
 
@@ -516,15 +549,18 @@ function generateGoalPlan(params) {
       for (const d of days) {
         const date = new Date(now);
         date.setDate(date.getDate() + (plan.length));
+        const detailedDesc = d.isRest ? d.desc : buildDetailedDescription(d.name, d.tag, zones, d.time);
         plan.push({
           name: d.name,
           date: date.toISOString().split('T')[0],
-          description: d.desc,
+          description: d.isRest ? d.desc : `${detailedDesc}\n📌 ${d.desc}`,
+          detailedPlan: detailedDesc,
           type: 'Run',
           moving_time: d.isRest ? 0 : Math.max(1, d.time),
           week: weekIdx,
           phase: phaseName,
           volumeKm: weekKm,
+          workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, zones, d.time),
         });
       }
     }
