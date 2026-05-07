@@ -207,8 +207,7 @@ async function syncToCalendar(plan, client) {
   return { created, total: plan.length };
 }
 
-module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime };
-// ... (mantenha todo o código existente acima) ...
+module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan };
 
 async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
   const { generateWorkoutDescription } = require('./ai');
@@ -261,6 +260,3 @@ async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
 
   return { plan, zones: {}, best5kPace: 0, target5kPace: 0 };
 }
-
-// Atualize o exports no final do arquivo para incluir a nova função
-module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan };

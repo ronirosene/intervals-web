@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intervals Training Hub</title>
   <style>
-    /* (Mantenha o CSS igual ao anterior) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
     .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -14,6 +13,7 @@
     .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; }
     .btn-primary { background: #38bdf8; color: #0f172a; }
     .btn-success { background: #22c55e; color: #0f172a; }
+    .btn-danger { background: #ef4444; color: white; font-size: 0.75rem; }
     .btn-outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
     .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #334155; }
     .card h2 { color: #38bdf8; margin-bottom: 16px; font-size: 1.2rem; }
@@ -23,8 +23,8 @@
     .stat .label { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
-    .form-group input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.9rem; }
-    .form-group input:focus { outline: none; border-color: #38bdf8; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.9rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #38bdf8; }
     .hidden { display: none; }
     #auth { text-align: center; padding: 60px 0; }
     #auth .card { max-width: 400px; margin: 0 auto; }
@@ -33,16 +33,24 @@
     .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
     .plan-item { padding: 12px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #38bdf8; }
     .plan-item .name { font-weight: 600; }
-    .plan-item .desc { font-size: 0.85rem; color: #cbd5e1; margin-top: 6px; line-height: 1.4; }
+    .plan-item .desc { font-size: 0.85rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4; }
+    .plan-item .actions { display: flex; gap: 6px; margin-top: 8px; }
     .ai-badge { background: linear-gradient(45deg, #38bdf8, #818cf8); color: #0f172a; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
     .summary-box { background: #0f172a; padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #475569; color: #94a3b8; font-style: italic; }
     .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #22c55e; color: #0f172a; border-radius: 8px; font-weight: 600; z-index: 1000; transform: translateY(100px); transition: 0.3s; }
     .toast.show { transform: translateY(0); }
+    .faq-item { padding: 14px; background: #0f172a; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #334155; }
+    .faq-item .faq-q { font-weight: 600; color: #38bdf8; }
+    .faq-item .faq-a { margin-top: 8px; color: #94a3b8; display: none; line-height: 1.6; }
+    .faq-item.open .faq-a { display: block; }
+    .stat-detailed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .stat-detailed div { padding: 8px; background: #0f172a; border-radius: 4px; text-align: center; }
+    .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
+    .stat-detailed .lbl { font-size: 0.7rem; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Tela de Login/Registro (Mantida igual) -->
     <div id="auth">
       <header><h1>🏃 Intervals Training Hub</h1></header>
       <div class="card">
@@ -64,7 +72,6 @@
       </div>
     </div>
 
-    <!-- App Principal -->
     <div id="app" class="hidden">
       <header>
         <h1>🏃 Intervals Training Hub</h1>
@@ -74,51 +81,127 @@
         </div>
       </header>
 
-      <!-- Navegação -->
       <div class="tabs">
         <div class="tab active" onclick="showSection('dashboard')">Dashboard</div>
+        <div class="tab" onclick="showSection('upload')">📁 Upload</div>
         <div class="tab" onclick="showSection('zeroplane')">🌱 Iniciante</div>
-        <div class="tab" onclick="showSection('plans')">Meus Planos</div>
-        <div class="tab" onclick="showSection('settings')">Configurações</div>
+        <div class="tab" onclick="showSection('plans')">Planos</div>
+        <div class="tab" onclick="showSection('faq')">❓ FAQ</div>
+        <div class="tab" onclick="showSection('settings')">⚙️</div>
       </div>
 
       <!-- Dashboard -->
       <div id="dashboard">
-        <div class="card">
-          <h2>📊 Resumo</h2>
+        <div class="card"><h2>📊 Resumo</h2>
           <div class="grid">
             <div class="stat"><div class="value" id="stat-runs">-</div><div class="label">Corridas</div></div>
             <div class="stat"><div class="value" id="stat-dist">-</div><div class="label">Distância (km)</div></div>
+            <div class="stat"><div class="value" id="stat-pace">-</div><div class="label">Pace Médio</div></div>
+            <div class="stat"><div class="value" id="stat-5k">-</div><div class="label">Melhor 5K</div></div>
           </div>
         </div>
       </div>
 
-      <!-- Nova Aba: Iniciante -->
-      <div id="zeroplane" class="hidden">
-        <div class="card">
-          <h2>🌱 Começando do Zero</h2>
-          <p style="color:#94a3b8; margin-bottom:16px">Sem arquivo de dados? Sem problema. Nossa IA cria um plano seguro para você começar.</p>
+      <!-- Upload Intervals -->
+      <div id="upload" class="hidden">
+        <div class="card"><h2>📁 Upload de Atividades (Intervals.icu)</h2>
+          <p style="color:#94a3b8; margin-bottom:12px">Envie seu arquivo .xlsx exportado do Intervals.icu para análise completa.</p>
+          <input type="file" id="file-input" accept=".xlsx,.xls" style="width:100%; padding:20px; border:2px dashed #334155; border-radius:8px; color:#94a3b8; cursor:pointer">
+          <button class="btn btn-primary" style="margin-top:12px" onclick="uploadFile()">📊 Analisar Dados</button>
+          <div id="upload-result" style="margin-top:12px"></div>
+        </div>
+        <div class="card" id="gen-plan-card" style="display:none"><h2>🏗️ Gerar Plano a partir dos Dados</h2>
           <div class="grid">
-            <div class="form-group"><label>Dias por semana</label><input type="number" id="zp-days" value="3" min="2" max="5"></div>
-            <div class="form-group"><label>Duração (semanas)</label><input type="number" id="zp-weeks" value="4" min="2" max="8"></div>
+            <div class="form-group"><label>Nome do Plano</label><input type="text" id="gen-name" value="Plano Baseado em Dados"></div>
+            <div class="form-group"><label>Meta 5K (min)</label><input type="number" id="gen-target" value="19" step="0.5"></div>
+            <div class="form-group"><label>Semanas</label><input type="number" id="gen-weeks" value="4" min="1"></div>
           </div>
-          <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Meu Plano</button>
-          <div id="zp-result" style="margin-top:16px"></div>
+          <button class="btn btn-success" onclick="generatePlan()">✨ Gerar Plano + IA</button>
+          <div id="gen-result" style="margin-top:12px"></div>
         </div>
       </div>
 
-      <!-- Aba: Meus Planos -->
+      <!-- Iniciante -->
+      <div id="zeroplane" class="hidden">
+        <div class="card"><h2>🌱 Plano do Zero</h2>
+          <p style="color:#94a3b8; margin-bottom:12px">Sem dados? Nossa IA cria um plano seguro para você começar.</p>
+          <div class="grid">
+            <div class="form-group"><label>Nome do Plano</label><input type="text" id="zp-name" value="Meu Plano Iniciante"></div>
+            <div class="form-group"><label>Dias/semana</label><input type="number" id="zp-days" value="3" min="2" max="5"></div>
+            <div class="form-group"><label>Semanas</label><input type="number" id="zp-weeks" value="4" min="2" max="8"></div>
+          </div>
+          <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Plano Iniciante</button>
+          <div id="zp-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- Planos -->
       <div id="plans" class="hidden">
-        <div class="card">
-          <h2>📅 Planos Salvos</h2>
-          <div id="plans-list">Carregando...</div>
+        <div class="card"><h2>📅 Meus Planos Salvos</h2><div id="plans-list">Carregando...</div></div>
+      </div>
+
+      <!-- FAQ -->
+      <div id="faq" class="hidden">
+        <div class="card"><h2>❓ FAQ — Como funciona o plano de treino?</h2>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">📐 Como o algoritmo calcula meu pace ideal?</div>
+            <div class="faq-a">O sistema analisa seu melhor 5K (ou dados de corridas recentes) e aplica a metodologia de treinamento baseada em zonas de intensidade:<br>
+            <br><strong>Zonas calculadas:</strong>
+            <br>• 🟢 <strong>Easy (Z2)</strong>: 120-150% do pace 5K — corrida leve, aeróbica
+            <br>• 🟡 <strong>Marathon</strong>: 110-125% — ritmo de conversação forte
+            <br>• 🟠 <strong>Threshold (Z4)</strong>: 95-105% — limiar de lactato
+            <br>• 🔴 <strong>VO2Max</strong>: 90-95% — potência aeróbica máxima
+            <br>• ⚡ <strong>Speed</strong>: 85-90% — velocidade pura (tiros de 400m)
+            <br><br><strong>Exemplo:</strong> Se seu melhor 5K é 20min (4:00/km), seu Threshold será ~4:00-4:12/km e seu Easy será ~5:20-6:00/km.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">🔄 Como o sistema refaz os treinos ao longo das semanas?</div>
+            <div class="faq-a">O plano usa <strong>periodização ondulatória</strong> com 3 princípios:<br><br>
+            1. <strong>Progressão:</strong> A cada semana, o volume (+5-10%) ou a intensidade (mais repetições) aumenta gradualmente.<br>
+            2. <strong>Recuperação cíclica:</strong> A cada 3 semanas, a 4ª é de recuperação (volume cai 25%, intensidade reduzida).<br>
+            3. <strong>Especificidade:</strong> Quanto mais perto da meta, mais treinos específicos (ritmo de prova, VO2Max).<br><br>
+            <strong>Exemplo de progressão nos tiros:</strong> Semana 1 = 6x400m | Semana 2 = 7x400m | Semana 3 = 8x400m | Semana 4 (recup) = 4x30s.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">📊 O que a IA faz de diferente?</div>
+            <div class="faq-a">A IA (<strong>Google Gemini</strong>) não calcula os números — isso é feito por algoritmos esportivos precisos.<br><br>
+            O papel da IA é <strong>traduzir</strong> a planilha técnica em linguagem motivacional e didática:<br>
+            • Explica o <strong>objetivo</strong> de cada treino (ex: "hoje criamos base aeróbica para aguentar os tiros de quinta")<br>
+            • Dá <strong>dicas práticas</strong> (ex: "tente manter a respiração em 2 tempos")<br>
+            • Mantém o <strong>engajamento</strong> com tom pessoal e emojis.
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">🔗 Como sincronizar com o Intervals.icu?</div>
+            <div class="faq-a">1. Vá em <strong>Configurações</strong> e preencha sua <strong>API Key</strong> e <strong>Athlete ID</strong> (encontrados em Settings > Developer Settings no Intervals.icu).<br>
+            2. Após gerar um plano, clique em <strong>"Sincronizar"</strong> ao lado dele na aba Planos.<br>
+            3. O sistema limpa seus treinos futuros e insere o novo plano automaticamente.<br>
+            4. Abra seu relógio Garmin e sincronize — os treinos aparecem no calendário!
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="this.classList.toggle('open')">
+            <div class="faq-q">🌱 Como funciona o Plano Iniciante?</div>
+            <div class="faq-a">Para quem está começando, o sistema <strong>não precisa de dados históricos</strong>. Ele cria um plano progressivo de <strong>caminhada alternada com trote leve</strong>.<br><br>
+            • <strong>Semana 1:</strong> 25 min alternando 1min trote / 2min caminhada<br>
+            • <strong>Semana 2:</strong> 30 min com 2min trote / 1min caminhada<br>
+            • <strong>Semana 3:</strong> 35 min de trote contínuo leve<br>
+            • <strong>Semana 4 (recup):</strong> 30 min leve<br><br>
+            O número de dias por semana é personalizável (recomendado: 3x/semana).
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Aba: Configurações -->
+      <!-- Configurações -->
       <div id="settings" class="hidden">
-        <div class="card">
-          <h2>⚙️ Configurações</h2>
+        <div class="card"><h2>⚙️ Configurações</h2>
           <div class="form-group"><label>Intervals API Key</label><input type="text" id="set-api-key"></div>
           <div class="form-group"><label>Intervals Athlete ID</label><input type="text" id="set-athlete-id"></div>
           <button class="btn btn-primary" onclick="saveSettings()">Salvar</button>
@@ -131,9 +214,16 @@
 
   <script>
     let token = localStorage.getItem('token');
+    let lastUploadAnalysis = null;
 
-    // Funções auxiliares
-    function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+    function toast(msg, err) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = err ? '#ef4444' : '#22c55e';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
     async function api(url, method = 'GET', body = null) {
       const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
       if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
@@ -141,8 +231,7 @@
       if (!res.ok) throw new Error((await res.json()).error);
       return res.json();
     }
-    
-    // Navegação
+
     function showTab(tab) {
       document.querySelectorAll('#auth .tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
@@ -152,90 +241,144 @@
     function showSection(sec) {
       document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
-      ['dashboard','zeroplane','plans','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
+      ['dashboard','upload','zeroplane','plans','faq','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
     }
 
-    // Auth
     async function login() {
       try {
         const data = await api('/auth/login', 'POST', { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
         token = data.token; localStorage.setItem('token', token); initApp(); toast('Login realizado!');
-      } catch (e) { toast('Erro: ' + e.message); }
+      } catch (e) { toast(e.message, true); }
     }
+
     async function register() {
       try {
         const data = await api('/auth/register', 'POST', { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value });
         token = data.token; localStorage.setItem('token', token); initApp(); toast('Conta criada!');
-      } catch (e) { toast('Erro: ' + e.message); }
+      } catch (e) { toast(e.message, true); }
     }
+
     function logout() { localStorage.removeItem('token'); location.reload(); }
 
-    // Lógica Principal
     async function initApp() {
       if (!token) { document.getElementById('auth').classList.remove('hidden'); document.getElementById('app').classList.add('hidden'); return; }
       document.getElementById('auth').classList.add('hidden'); document.getElementById('app').classList.remove('hidden');
-
       try {
         const { user } = await api('/auth/me');
         document.getElementById('user-name').textContent = user.name;
         document.getElementById('set-api-key').value = user.intervals_api_key || '';
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
-        loadPlans(); // Carrega a lista de planos ao entrar
+        loadPlans();
       } catch { logout(); }
     }
 
-    // Gerar Plano Iniciante
-    async function generateZeroPlan() {
-      document.getElementById('zp-result').innerHTML = '<div style="color:#38bdf8">Gerando com IA...</div>';
+    // Upload
+    async function uploadFile() {
+      const file = document.getElementById('file-input').files[0];
+      if (!file) return toast('Selecione um arquivo .xlsx', true);
+      const form = new FormData();
+      form.append('file', file);
+      document.getElementById('upload-result').innerHTML = '<div style="color:#38bdf8">Analisando...</div>';
       try {
-        const res = await api('/data/generate-zero-plan', 'POST', { weeks: document.getElementById('zp-weeks').value, daysPerWeek: document.getElementById('zp-days').value });
-        
-        let html = `<div class="summary-box">✅ Plano criado! ${res.sessions} sessões geradas.</div>`;
-        html += '<div style="max-height:300px; overflow-y:auto; margin-top:10px">';
-        res.plan.slice(0, 7).forEach(p => {
-           html += `<div class="plan-item"><div class="name">${p.name} <span class="ai-badge">IA</span></div><div class="desc">${p.description.substring(0, 60)}...</div></div>`;
-        });
+        const res = await fetch('/api/data/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form });
+        const data = await res.json();
+        if (!res.ok) return toast(data.error, true);
+        lastUploadAnalysis = data.analysis;
+        let html = `<div class="summary-box">✅ ${data.message}</div><div class="stat-detailed">`;
+        html += `<div><div class="val">${data.analysis.totalRuns}</div><div class="lbl">Corridas</div></div>`;
+        html += `<div><div class="val">${data.analysis.totalDist} km</div><div class="lbl">Distância</div></div>`;
+        if (data.analysis.best5k) html += `<div><div class="val">${Math.floor(data.analysis.best5k.time/60)}:${String(Math.round(data.analysis.best5k.time%60)).padStart(2,'0')}</div><div class="lbl">Melhor 5K</div></div>`;
+        html += `<div><div class="val">${data.analysis.avgWeeklyDist} km</div><div class="lbl">Média Semanal</div></div>`;
         html += '</div>';
-        document.getElementById('zp-result').innerHTML = html;
-        
-        loadPlans(); // Atualiza a lista de salvos
-        toast('Plano gerado com sucesso!');
-      } catch (e) { toast('Erro: ' + e.message); }
+        document.getElementById('upload-result').innerHTML = html;
+        document.getElementById('gen-plan-card').style.display = 'block';
+        toast('Dados analisados! Agora gere seu plano.');
+      } catch (e) { toast(e.message, true); }
     }
 
-    // Carregar Lista de Planos Salvos
+    async function generatePlan() {
+      document.getElementById('gen-result').innerHTML = '<div style="color:#38bdf8">Gerando plano personalizado com IA...</div>';
+      try {
+        const res = await api('/data/generate-plan', 'POST', { planName: document.getElementById('gen-name').value, target5kMin: parseFloat(document.getElementById('gen-target').value), weeks: parseInt(document.getElementById('gen-weeks').value) });
+        showPlanPreview(res);
+        loadPlans();
+        toast('Plano gerado com sucesso!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    async function generateZeroPlan() {
+      document.getElementById('zp-result').innerHTML = '<div style="color:#38bdf8">Gerando plano iniciante com IA...</div>';
+      try {
+        const res = await api('/data/generate-zero-plan', 'POST', { planName: document.getElementById('zp-name').value, weeks: parseInt(document.getElementById('zp-weeks').value), daysPerWeek: parseInt(document.getElementById('zp-days').value) });
+        showPlanPreview(res);
+        loadPlans();
+        toast('Plano criado!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    function showPlanPreview(res) {
+      const preview = document.createElement('div');
+      preview.innerHTML = `<div class="summary-box">✅ ${res.message} — ${res.sessions} sessões em ${res.weeks} semanas</div>`;
+      preview.innerHTML += '<div style="max-height:300px; overflow-y:auto; margin-top:10px">';
+      res.plan.slice(0, 14).forEach(p => {
+        preview.innerHTML += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">IA</span></div><div class="desc">${p.description.substring(0,80)}...</div></div>`;
+      });
+      preview.innerHTML += '</div>';
+      // Mostra no resultado ativo
+      const activeResult = document.getElementById('gen-result');
+      if (activeResult) { activeResult.innerHTML = ''; activeResult.appendChild(preview); }
+    }
+
     async function loadPlans() {
       const list = document.getElementById('plans-list');
       try {
         const res = await api('/data/plans');
         list.innerHTML = '';
-        if (res.plans.length === 0) list.innerHTML = '<p style="color:#94a3b8">Nenhum plano salvo ainda.</p>';
-        
+        if (res.plans.length === 0) { list.innerHTML = '<p style="color:#94a3b8">Nenhum plano salvo ainda. Vá em "Upload" ou "Iniciante" para criar um!</p>'; return; }
         res.plans.forEach(p => {
           const pData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
+          const sessions = pData.plan ? pData.plan.length : 0;
+          let worksoutsPreview = '';
+          if (pData.plan) {
+            const first7 = pData.plan.slice(0, 7);
+            worksoutsPreview = first7.map(w => `<div style="font-size:0.78rem; color:#94a3b8; padding:2px 0">${w.name} ${w.moving_time > 0 ? '— '+Math.round(w.moving_time/60)+'min' : ''}</div>`).join('');
+          }
           list.innerHTML += `
-            <div class="plan-item">
-              <div class="name">${p.weeks} Semanas (${pData.plan.length} treinos)</div>
-              <div class="desc">Criado em: ${new Date(p.created_at).toLocaleDateString()}</div>
-              <button class="btn btn-outline" style="margin-top:8px; padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">Sincronizar</button>
+            <div class="plan-item" style="border-left-color: ${p.synced ? '#22c55e' : '#38bdf8'}">
+              <div class="name">📋 ${p.plan_name || 'Sem nome'} <span style="font-size:0.8rem; color:#94a3b8">(${p.weeks} sem • ${sessions} treinos) ${p.synced ? '✅ Sincronizado' : '⏳ Pendente'}</span></div>
+              <div class="desc" style="font-size:0.8rem; color:#64748b">Criado em ${new Date(p.created_at).toLocaleDateString('pt-BR')}</div>
+              ${worksoutsPreview ? '<div style="margin-top:6px; padding-top:6px; border-top:1px solid #1e293b">' + worksoutsPreview + '</div>' : ''}
+              <div class="actions">
+                <button class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem" onclick="syncPlan(${p.id})">🔄 Sincronizar</button>
+                <button class="btn btn-danger" onclick="deletePlan(${p.id})">🗑️ Excluir</button>
+              </div>
             </div>`;
         });
-      } catch (e) { list.innerHTML = 'Erro ao carregar planos.'; }
+      } catch (e) { list.innerHTML = 'Erro ao carregar.'; }
     }
 
     async function syncPlan(id) {
       try {
-        await api('/data/sync-plan', 'POST', { planId: id });
-        toast('Sincronizado com sucesso!');
+        const res = await api('/data/sync-plan', 'POST', { planId: id });
+        toast(`${res.created}/${res.total} treinos sincronizados!`);
         loadPlans();
-      } catch (e) { toast('Erro: ' + e.message); }
+      } catch (e) { toast(e.message, true); }
+    }
+
+    async function deletePlan(id) {
+      if (!confirm('Excluir este plano permanentemente?')) return;
+      try {
+        await api('/data/plan/' + id, 'DELETE');
+        toast('Plano excluído');
+        loadPlans();
+      } catch (e) { toast(e.message, true); }
     }
 
     async function saveSettings() {
       try {
         await api('/auth/settings', 'PUT', { intervals_api_key: document.getElementById('set-api-key').value, intervals_athlete_id: document.getElementById('set-athlete-id').value });
-        toast('Salvo!');
-      } catch (e) { toast('Erro: ' + e.message); }
+        toast('Configurações salvas!');
+      } catch (e) { toast(e.message, true); }
     }
 
     initApp();

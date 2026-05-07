@@ -49,6 +49,7 @@ async function initDb() {
       CREATE TABLE IF NOT EXISTS training_plans (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
+        plan_name TEXT DEFAULT 'Meu Plano',
         weeks INTEGER,
         plan_data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +57,8 @@ async function initDb() {
         synced_at TIMESTAMP
       );
     `);
+    // Adiciona coluna plan_name se não existir (para tabelas já criadas)
+    await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'Meu Plano'`).catch(() => {});
     console.log('✅ Banco de dados inicializado');
   } catch (e) {
     console.error('❌ Erro ao inicializar DB:', e.message);
