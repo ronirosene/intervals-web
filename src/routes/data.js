@@ -140,12 +140,62 @@ router.get('/plans', auth, async (req, res) => {
   res.json({ plans });
 });
 
-// Deletar plano
+// Deletar plano (e remove treinos sincronizados do Intervals.icu automaticamente)
 router.delete('/plan/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const result = await query('DELETE FROM training_plans WHERE id = $1 AND user_id = $2 RETURNING id', [id, req.userId]);
-  if (!result.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
-  res.json({ message: 'Plano excluído' });
+
+  // Carrega o plano antes de deletar
+  const planRecord = await query('SELECT * FROM training_plans WHERE id = $1 AND user_id = $2', [id, req.userId]);
+  if (!planRecord.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
+
+  const p = planRecord.rows[0];
+  const planData = typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data;
+  let deletedFromIntervals = false;
+
+  // Se o plano foi sincronizado, remove os treinos do Intervals.icu
+  if (p.synced && planData.plan && planData.plan.length > 0) {
+    const user = await query('SELECT intervals_api_key, intervals_athlete_id FROM users WHERE id = $1', [req.userId]);
+    const u = user.rows[0];
+    if (u.intervals_api_key && u.intervals_athlete_id) {
+      try {
+        const client = new IntervalsClient({ apiKey: u.intervals_api_key, athleteId: u.intervals_athlete_id });
+
+        // Descobre a data mais antiga e mais recente do plano
+        const dates = planData.plan.map(w => w.date).filter(Boolean).sort();
+        const oldest = dates[0];
+        const newest = dates[dates.length - 1];
+
+        if (oldest && newest) {
+          // Lista eventos WORKOUT no período
+          const futureDate = new Date(newest);
+          futureDate.setDate(futureDate.getDate() + 1);
+          const events = await client.events.listEvents({
+            oldest,
+            newest: futureDate.toISOString().split('T')[0],
+            category: ['WORKOUT']
+          });
+          for (const e of events) {
+            if (e.id) {
+              try { await client.events.deleteEvent(e.id); } catch {}
+            }
+          }
+          deletedFromIntervals = true;
+        }
+      } catch (e) {
+        console.error('Erro ao deletar treinos do Intervals:', e.message);
+        // Continua mesmo se falhar — o plano é deletado do DB de qualquer forma
+      }
+    }
+  }
+
+  // Deleta o plano do banco
+  await query('DELETE FROM training_plans WHERE id = $1 AND user_id = $2', [id, req.userId]);
+
+  res.json({
+    message: deletedFromIntervals
+      ? 'Plano excluído e treinos removidos do Intervals.icu'
+      : 'Plano excluído'
+  });
 });
 
 // ===================== REAL-TIME INTERVALS SYNC =====================
