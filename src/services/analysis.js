@@ -1,5 +1,7 @@
 const XLSX = require('xlsx');
-const { generateWorkoutDescription, generateSummary } = require('./ai');
+const { generateWorkoutDescription } = require('./ai');
+
+// ===================== HELPERS =====================
 
 function formatPace(paceSecPerKm) {
   if (!paceSecPerKm || paceSecPerKm <= 0 || paceSecPerKm > 600) return 'N/A';
@@ -24,6 +26,150 @@ function parsePaceFromDistanceTime(distMeters, timeSeconds) {
   if (!distMeters || !timeSeconds || distMeters <= 0 || timeSeconds <= 0) return 0;
   return (timeSeconds / distMeters) * 1000;
 }
+
+// ===================== WORKOUT_DOC BUILDER =====================
+
+const STEPS = {
+  warmup: (sec, paceLow, paceHigh) => ({
+    type: 'warmup',
+    duration: { value: sec, unit: 'seconds' },
+    pace_min: { value: paceLow, unit: 'min_per_km' },
+    pace_max: { value: paceHigh, unit: 'min_per_km' },
+  }),
+  work: (sec, paceLow, paceHigh) => ({
+    type: 'work',
+    duration: { value: sec, unit: 'seconds' },
+    pace_min: { value: paceLow, unit: 'min_per_km' },
+    pace_max: { value: paceHigh, unit: 'min_per_km' },
+  }),
+  recovery: (sec, paceLow, paceHigh) => ({
+    type: 'recovery',
+    duration: { value: sec, unit: 'seconds' },
+    pace_min: { value: paceLow, unit: 'min_per_km' },
+    pace_max: { value: paceHigh, unit: 'min_per_km' },
+  }),
+  cooldown: (sec, paceLow, paceHigh) => ({
+    type: 'cooldown',
+    duration: { value: sec, unit: 'seconds' },
+    pace_min: { value: paceLow, unit: 'min_per_km' },
+    pace_max: { value: paceHigh, unit: 'min_per_km' },
+  }),
+  repeat: (repeats, steps) => ({
+    type: 'repeat',
+    repeats,
+    steps,
+  }),
+};
+
+function buildWorkoutDoc(name, typeTag, zones, durationSec) {
+  // Convert paces from sec/km to min/km for Intervals format
+  const toMinKm = (s) => +(s / 60).toFixed(2);
+  const easyPace = toMinKm(zones.easy.max);
+  const marathonPace = toMinKm(zones.marathon.min);
+  const thresholdPace = toMinKm(zones.threshold.min);
+  const speedPace = toMinKm(zones.speed.min);
+  const warmPaceLow = toMinKm(zones.easy.min);
+
+  const totalMin = Math.round(durationSec / 60);
+  const warmSec = Math.min(600, Math.round(durationSec * 0.3));
+  const coolSec = Math.min(600, Math.round(durationSec * 0.25));
+  const workSec = durationSec - warmSec - coolSec;
+
+  let steps = [];
+
+  switch (typeTag) {
+    case 'easy': {
+      const runSec = Math.max(600, workSec);
+      steps = [
+        STEPS.warmup(300, easyPace + 1, easyPace + 1.5),
+        STEPS.work(runSec, easyPace, marathonPace),
+        STEPS.cooldown(300, easyPace + 0.5, easyPace + 1.5),
+      ];
+      break;
+    }
+    case 'intervals': {
+      const reps = Math.max(4, Math.min(10, Math.floor(workSec / 300)));
+      const workRepSec = Math.floor(workSec / reps / 2);
+      const recRepSec = Math.max(90, Math.floor(workRepSec * 0.4));
+      steps = [
+        STEPS.warmup(warmSec, easyPace + 0.5, easyPace + 1),
+        STEPS.repeat(reps, [
+          STEPS.work(workRepSec, speedPace - 0.2, speedPace + 0.2),
+          STEPS.recovery(recRepSec, easyPace, easyPace + 1),
+        ]),
+        STEPS.cooldown(coolSec, easyPace + 0.5, easyPace + 1.5),
+      ];
+      break;
+    }
+    case 'tempo': {
+      const tempoSec = Math.max(600, workSec);
+      steps = [
+        STEPS.warmup(warmSec, easyPace + 0.5, easyPace + 1),
+        STEPS.work(tempoSec, thresholdPace - 0.15, thresholdPace + 0.15),
+        STEPS.cooldown(coolSec, easyPace + 0.5, easyPace + 1.5),
+      ];
+      break;
+    }
+    case 'strides': {
+      const easyRunSec = Math.max(600, workSec - 360);
+      steps = [
+        STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
+        STEPS.repeat(6, [
+          STEPS.work(30, speedPace - 0.5, speedPace - 0.3),
+          STEPS.recovery(60, easyPace, easyPace + 0.5),
+        ]),
+        STEPS.work(easyRunSec, easyPace, marathonPace),
+        STEPS.cooldown(300, easyPace + 0.5, easyPace + 1.5),
+      ];
+      break;
+    }
+    case 'long':
+    case 'long-run': {
+      const runSec = Math.max(1800, workSec);
+      steps = [
+        STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
+        STEPS.work(runSec, easyPace, marathonPace),
+        STEPS.cooldown(300, easyPace + 0.5, easyPace + 1.5),
+      ];
+      break;
+    }
+    case 'beginner': {
+      if (durationSec < 1200) {
+        steps = [STEPS.work(durationSec, easyPace + 1, easyPace + 2)];
+      } else {
+        const jogBlocks = Math.max(3, Math.floor(durationSec / 480));
+        const jogSec = Math.floor(60);
+        const walkSec = Math.floor(120);
+        const blockSec = (jogSec + walkSec) * jogBlocks;
+        steps = [
+          STEPS.warmup(300, easyPace + 1, easyPace + 2),
+          STEPS.repeat(jogBlocks, [
+            STEPS.work(jogSec, easyPace + 0.5, easyPace + 1.5),
+            STEPS.recovery(walkSec, easyPace + 2, easyPace + 3),
+          ]),
+          STEPS.cooldown(300, easyPace + 1.5, easyPace + 3),
+        ];
+        // adjust total
+      }
+      break;
+    }
+    default: {
+      steps = [
+        STEPS.warmup(300, easyPace + 0.5, easyPace + 1),
+        STEPS.work(workSec, easyPace, marathonPace),
+        STEPS.cooldown(300, easyPace + 0.5, easyPace + 1.5),
+      ];
+    }
+  }
+
+  return {
+    sport: 'run',
+    name: name,
+    steps,
+  };
+}
+
+// ===================== ANALYSIS =====================
 
 function analyzeRuns(runs) {
   runs.forEach(r => {
@@ -128,6 +274,8 @@ function analyzeHRZones(runs) {
   return zones;
 }
 
+// ===================== PLAN GENERATORS =====================
+
 async function generatePlan(analysis, userProfile, weeks = 4, target5kMin = 19) {
   const best5kPace = analysis.best5k ? analysis.best5k.pace : analysis.avgPace;
   const target5kPace = target5kMin * 60 / 5;
@@ -150,34 +298,102 @@ async function generatePlan(analysis, userProfile, weeks = 4, target5kMin = 19) 
     const isRecovery = w % 3 === 2;
     const volume = isRecovery ? 0.75 : 1.0;
 
-    const days = [
-      { name: `[S${weekNum}] Easy Run`, desc: `Corrida leve Z2 | Pace: ${formatPace(zones.easy.min)}-${formatPace(zones.easy.max)} | 40-50 min`, time: Math.round(45 * 60 * volume) },
-      { name: `[S${weekNum}] Intervalos`, desc: isRecovery ? `Recuperação ativa | 30min leve + 4x30s` : `Aquec 15min + ${6 + w}x400m @ ${formatPace(zones.speed.min)} / 2min trote + 10min leve`, time: Math.round(50 * 60 * (isRecovery ? 0.6 : 1)) },
-      { name: `[S${weekNum}] Descanso`, desc: 'Descanso total ou caminhada leve', isRest: true },
-      { name: `[S${weekNum}] Tempo Run`, desc: isRecovery ? `20min leve + 10min @ ${formatPace(zones.threshold.min)}` : `Aquec 15min + ${15 + w * 5}min @ ${formatPace(zones.threshold.min)}-${formatPace(zones.threshold.max)} + 10min leve`, time: Math.round((40 + w * 5) * 60 * volume) },
-      { name: `[S${weekNum}] Strides + Core`, desc: `20min leve + 6x100m strides + 15min core`, time: Math.round(35 * 60 * volume) },
-      { name: `[S${weekNum}] Descanso`, desc: 'Descanso ativo, alongamento', isRest: true },
-      { name: `[S${weekNum}] Long Run`, desc: isRecovery ? `Corrida regenerativa | 45min @ Z2` : `Corrida longa | ${60 + w * 5}min @ Z2-Z3`, time: Math.round((60 + w * 5) * 60 * volume) },
+    const dayDefs = [
+      { name: `[S${weekNum}] Easy Run`, tag: 'easy', desc: `Corrida leve Z2 | Pace: ${formatPace(zones.easy.min)}-${formatPace(zones.easy.max)} | 40-50 min`, time: Math.round(45 * 60 * volume) },
+      { name: `[S${weekNum}] Intervalos`, tag: 'intervals', desc: isRecovery ? `Recuperação ativa | 30min leve + 4x30s` : `Aquec 15min + ${6 + w}x400m @ ${formatPace(zones.speed.min)} / 2min trote + 10min leve`, time: Math.round(50 * 60 * (isRecovery ? 0.6 : 1)) },
+      { name: `[S${weekNum}] Descanso`, tag: 'rest', desc: 'Descanso total ou caminhada leve', isRest: true },
+      { name: `[S${weekNum}] Tempo Run`, tag: 'tempo', desc: isRecovery ? `20min leve + 10min @ ${formatPace(zones.threshold.min)}` : `Aquec 15min + ${15 + w * 5}min @ ${formatPace(zones.threshold.min)}-${formatPace(zones.threshold.max)} + 10min leve`, time: Math.round((40 + w * 5) * 60 * volume) },
+      { name: `[S${weekNum}] Strides + Core`, tag: 'strides', desc: `20min leve + 6x100m strides + 15min core`, time: Math.round(35 * 60 * volume) },
+      { name: `[S${weekNum}] Descanso`, tag: 'rest', desc: 'Descanso ativo, alongamento', isRest: true },
+      { name: `[S${weekNum}] Long Run`, tag: 'long-run', desc: isRecovery ? `Corrida regenerativa | 45min @ Z2` : `Corrida longa | ${60 + w * 5}min @ Z2-Z3`, time: Math.round((60 + w * 5) * 60 * volume) },
     ];
 
-    for (const d of days) {
+    for (const d of dayDefs) {
       const aiDesc = await generateWorkoutDescription(
-        { name: userProfile.name }, 
+        { name: userProfile.name },
         { ...d, target5k: formatTime(target5kMin * 60) }
       );
-      plan.push({
+
+      const entry = {
         name: d.name,
         date: current.toISOString().split('T')[0],
         description: aiDesc,
         type: 'Run',
         moving_time: d.isRest ? 0 : d.time,
-      });
+        workout_doc: d.isRest ? undefined : buildWorkoutDoc(d.name, d.tag, zones, d.time),
+      };
+
+      plan.push(entry);
       current.setDate(current.getDate() + 1);
     }
   }
 
   return { plan, zones, best5kPace, target5kPace };
 }
+
+async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
+  const plan = [];
+  const today = new Date();
+  let current = new Date(today);
+  current.setDate(today.getDate() + 1);
+
+  let runDays = [1, 3, 5];
+  if (daysPerWeek === 2) runDays = [1, 4];
+  if (daysPerWeek === 4) runDays = [1, 2, 4, 5];
+  if (daysPerWeek === 5) runDays = [1, 2, 3, 4, 5];
+
+  // Use beginner-friendly paces (6-7 min/km como Easy)
+  const beginnerZones = {
+    easy: { min: 360, max: 420 },
+    marathon: { min: 330, max: 360 },
+    threshold: { min: 300, max: 330 },
+    vo2Max: { min: 270, max: 300 },
+    speed: { min: 240, max: 270 },
+  };
+
+  for (let w = 0; w < weeks; w++) {
+    for (let d = 0; d < 7; d++) {
+      const isRunDay = runDays.includes(d);
+
+      if (!isRunDay) {
+        plan.push({
+          name: `[S${w + 1}] Descanso`,
+          date: current.toISOString().split('T')[0],
+          description: 'Descanso total ou caminhada leve de 15 min.',
+          type: 'Run',
+          moving_time: 0,
+        });
+        current.setDate(current.getDate() + 1);
+        continue;
+      }
+
+      const duration = 25 + (w * 5);
+      const time = duration * 60;
+      const desc = `Comece com 5min de caminhada. Alterne 1min trote leve / 2min caminhada por ${duration} minutos. Foco na respiração.`;
+      const name = `[S${w + 1}] Caminhada/Trote`;
+
+      const aiDesc = await generateWorkoutDescription(
+        { name: userProfile.name },
+        { name, description: desc, moving_time: time }
+      );
+
+      plan.push({
+        name,
+        date: current.toISOString().split('T')[0],
+        description: aiDesc,
+        type: 'Run',
+        moving_time: time,
+        workout_doc: buildWorkoutDoc(name, 'beginner', beginnerZones, time),
+      });
+
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  return { plan, zones: {}, best5kPace: 0, target5kPace: 0 };
+}
+
+// ===================== SYNC =====================
 
 async function syncToCalendar(plan, client) {
   const today = new Date().toISOString().split('T')[0];
@@ -193,70 +409,24 @@ async function syncToCalendar(plan, client) {
   let created = 0;
   for (const w of plan) {
     try {
-      await client.events.createEvent({
+      const eventData = {
         name: w.name,
         start_date_local: `${w.date}T06:30:00`,
         description: w.description,
         category: 'WORKOUT',
         type: w.type,
         moving_time: w.moving_time,
-      });
+      };
+      if (w.workout_doc) {
+        eventData.workout_doc = w.workout_doc;
+      }
+      await client.events.createEvent(eventData);
       created++;
-    } catch {}
+    } catch (e) {
+      console.error('Sync error:', w.name, e.message);
+    }
   }
   return { created, total: plan.length };
 }
 
 module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan };
-
-async function generateZeroPlan(userProfile, weeks = 4, daysPerWeek = 3) {
-  const { generateWorkoutDescription } = require('./ai');
-  const plan = [];
-  const today = new Date();
-  let current = new Date(today);
-  current.setDate(today.getDate() + 1); // Começa amanhã
-
-  // Define os dias de treino (0=Dom, 1=Seg, ...)
-  // Lógica: Seg(1), Qua(3), Sex(5) para 3 dias; ajusta para outros casos
-  let runDays = [1, 3, 5]; 
-  if (daysPerWeek === 2) runDays = [1, 4]; // Seg, Qui
-  if (daysPerWeek === 4) runDays = [1, 2, 4, 5]; // Seg, Ter, Qui, Sex
-  if (daysPerWeek === 5) runDays = [1, 2, 3, 4, 5]; // Seg a Sex
-
-  for (let w = 0; w < weeks; w++) {
-    for (let d = 0; d < 7; d++) {
-      const isRunDay = runDays.includes(d);
-      const isRestDay = !isRunDay;
-      
-      let name = `[S${w + 1}] Descanso`;
-      let desc = 'Descanso total ou caminhada leve de 15 min.';
-      let time = 0;
-
-      if (isRunDay) {
-        name = `[S${w + 1}] Caminhada/Trote`;
-        // Progressão simples para iniciantes
-        const duration = 25 + (w * 5); // 25min, 30min, 35min...
-        desc = `Comece com 5min de caminhada. Alterne 1min trote leve / 2min caminhada por ${duration} minutos. Foco na respiração.`;
-        time = duration * 60;
-      }
-
-      // IA gera o texto motivacional
-      const aiDesc = await generateWorkoutDescription(
-        { name: userProfile.name },
-        { name, description: desc, moving_time: time }
-      );
-
-      plan.push({
-        name,
-        date: current.toISOString().split('T')[0],
-        description: aiDesc,
-        type: 'Run',
-        moving_time: time
-      });
-
-      current.setDate(current.getDate() + 1);
-    }
-  }
-
-  return { plan, zones: {}, best5kPace: 0, target5kPace: 0 };
-}
