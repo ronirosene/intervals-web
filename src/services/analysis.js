@@ -61,6 +61,35 @@ const STEPS = {
   }),
 };
 
+function paceMinPerKmToStr(minPerKm) {
+  const totalSec = Math.round(minPerKm * 60);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function stepsToIntervalsSyntax(steps) {
+  if (!steps || !steps.length) return '';
+  const lines = [];
+  for (const step of steps) {
+    if (step.type === 'repeat') {
+      lines.push('');
+      lines.push(`${step.repeats}x`);
+      for (const s of (step.steps || [])) {
+        const dur = `${Math.round(s.duration.value / 60)}m`;
+        const pace = `${paceMinPerKmToStr(s.pace_min.value)}-${paceMinPerKmToStr(s.pace_max.value)}/km Pace`;
+        lines.push(`- ${dur} ${pace}`);
+      }
+      lines.push('');
+    } else {
+      const dur = `${Math.round(step.duration.value / 60)}m`;
+      const pace = `${paceMinPerKmToStr(step.pace_min.value)}-${paceMinPerKmToStr(step.pace_max.value)}/km Pace`;
+      lines.push(`- ${dur} ${pace}`);
+    }
+  }
+  return lines.join('\n');
+}
+
 function buildWorkoutDoc(name, typeTag, zones, durationSec) {
   const easyPace = zones.easy ? (zones.easy.min + zones.easy.max) / 2 / 60 : 5.5;
   const marathonPace = zones.marathon ? (zones.marathon.min + zones.marathon.max) / 2 / 60 : 5.0;
@@ -454,8 +483,12 @@ async function syncToCalendar(plan, client) {
         moving_time: w.moving_time,
       };
       if (w.workout_doc) {
-        // API do Intervals.icu espera workout_doc como JSON string, não objeto
-        eventData.workout_doc = typeof w.workout_doc === 'string' ? w.workout_doc : JSON.stringify(w.workout_doc);
+        // Usa sintaxe de descrição do Intervals.icu + workout_doc vazio para acionar o parser server-side
+        const syntax = stepsToIntervalsSyntax(w.workout_doc.steps);
+        if (syntax) {
+          eventData.description = syntax + '\n\n' + (w.description || '');
+        }
+        eventData.workout_doc = '{}';
       }
       await client.events.createEvent(eventData);
       created++;
