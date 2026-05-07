@@ -429,4 +429,115 @@ async function syncToCalendar(plan, client) {
   return { created, total: plan.length };
 }
 
-module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan };
+module.exports = { analyzeRuns, generatePlan, syncToCalendar, formatPace, formatTime, generateZeroPlan, generateGoalPlan };
+
+// ===================== GOAL-BASED PLAN GENERATOR =====================
+
+function generateGoalPlan(params) {
+  const { distanceKm, targetTimeSeconds, targetDate, weeks, planName, current5kPace } = params;
+  const targetPace = targetTimeSeconds / distanceKm;
+  const now = new Date();
+
+  const zones = {
+    easy: { min: targetPace * 1.35, max: targetPace * 1.5 },
+    marathon: { min: targetPace * 1.2, max: targetPace * 1.3 },
+    threshold: { min: targetPace * 0.95, max: targetPace * 1.05 },
+    vo2Max: { min: targetPace * 0.9, max: targetPace * 0.95 },
+    speed: { min: targetPace * 0.85, max: targetPace * 0.9 },
+    racePace: { min: targetPace * 0.97, max: targetPace * 1.0 },
+  };
+
+  const plan = [];
+  const phases = ['Base', 'Build', 'Race Prep', 'Taper'];
+  const phaseWeeks = [Math.ceil(weeks * 0.4), Math.ceil(weeks * 0.35), Math.ceil(weeks * 0.15), Math.max(2, weeks - Math.ceil(weeks * 0.4) - Math.ceil(weeks * 0.35) - Math.ceil(weeks * 0.15))];
+
+  // Distances for key workouts
+  const longRunDist = Math.min(distanceKm, Math.max(5, Math.round(distanceKm * 0.6)));
+
+  let weekIdx = 0;
+  for (let phase = 0; phase < phases.length; phase++) {
+    for (let pw = 0; pw < phaseWeeks[phase]; pw++) {
+      weekIdx++;
+      const isRecovery = pw % 3 === 2;
+      const volFactor = isRecovery ? 0.7 : 1.0;
+      const phaseName = phases[phase];
+      const weekPct = weekIdx / weeks;
+      const weekKm = Math.round((5 + (distanceKm * 0.15) * weekPct) * volFactor);
+
+      const days = [
+        {
+          name: `[S${weekIdx}] Easy Run`,
+          tag: 'easy',
+          desc: `Fase ${phaseName} | Corrida leve Z2 | ${Math.round(30 * volFactor)} min`,
+          time: Math.round(30 * 60 * volFactor),
+        },
+        {
+          name: `[S${weekIdx}] Treino Específico`,
+          tag: phase === 0 ? 'tempo' : phase === 1 ? 'intervals' : 'tempo',
+          desc: phase === 0
+            ? `Fase ${phaseName} | ${Math.round(8 * volFactor)}x400m progressivos`
+            : `Fase ${phaseName} | ${Math.round(6 - phase + 3)}x${distanceKm < 15 ? 1000 : 2000}m @ ritmo de prova / 3min descanso`,
+          time: Math.round(45 * 60 * volFactor),
+        },
+        {
+          name: `[S${weekIdx}] Descanso`,
+          tag: 'rest',
+          desc: 'Descanso total',
+          isRest: true,
+          time: 0,
+        },
+        {
+          name: `[S${weekIdx}] Tempo Run`,
+          tag: 'tempo',
+          desc: `Fase ${phaseName} | ${Math.round(15 * volFactor + weekIdx * 2)}min @ ${formatPace(zones.threshold.min * 60)}`,
+          time: Math.round((20 + weekIdx * 2) * 60 * volFactor),
+        },
+        {
+          name: `[S${weekIdx}] Regenerativo`,
+          tag: 'easy',
+          desc: `Fase ${phaseName} | 25min leve + alongamento`,
+          time: Math.round(25 * 60 * volFactor),
+        },
+        {
+          name: `[S${weekIdx}] Descanso`,
+          tag: 'rest',
+          desc: 'Descanso ativo',
+          isRest: true,
+          time: 0,
+        },
+        {
+          name: `[S${weekIdx}] Long Run`,
+          tag: 'long-run',
+          desc: `Fase ${phaseName} | ${phase === 3 ? `Simulado: ${Math.round(distanceKm * 0.6)}km` : `Longo: ${Math.round(weekKm * 1.5)}km`} @ ritmo de prova + 10%`,
+          time: Math.round((35 + weekIdx * 3) * 60 * volFactor),
+        },
+      ];
+
+      for (const d of days) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + (plan.length));
+        plan.push({
+          name: d.name,
+          date: date.toISOString().split('T')[0],
+          description: d.desc,
+          type: 'Run',
+          moving_time: d.isRest ? 0 : Math.max(1, d.time),
+          week: weekIdx,
+          phase: phaseName,
+          volumeKm: weekKm,
+        });
+      }
+    }
+  }
+
+  const summary = {
+    distanceKm,
+    targetTime: formatTime(targetTimeSeconds),
+    targetPace: formatPace(targetPace * 60),
+    weeks,
+    sessions: plan.length,
+    phases: phases.map((name, i) => ({ name, weeks: phaseWeeks[i], focus: i === 0 ? 'Base aeróbica' : i === 1 ? 'Desenvolvimento' : i === 2 ? 'Afinamento' : 'Recuperação' })),
+  };
+
+  return { plan, summary, zones };
+}

@@ -4,7 +4,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 const { IntervalsClient } = require('intervals-icu');
 const { auth } = require('../middleware/auth');
-const { analyzeRuns, generatePlan, syncToCalendar, generateZeroPlan } = require('../services/analysis');
+const { analyzeRuns, generatePlan, syncToCalendar, generateZeroPlan, generateGoalPlan } = require('../services/analysis');
 const { query } = require('../db/pg');
 
 const router = express.Router();
@@ -134,6 +134,243 @@ router.delete('/plan/:id', auth, async (req, res) => {
   const result = await query('DELETE FROM training_plans WHERE id = $1 AND user_id = $2 RETURNING id', [id, req.userId]);
   if (!result.rows[0]) return res.status(404).json({ error: 'Plano não encontrado' });
   res.json({ message: 'Plano excluído' });
+});
+
+// ===================== REAL-TIME INTERVALS SYNC =====================
+
+// Sincronizar atividades recentes do Intervals.icu
+router.post('/sync-activities', auth, async (req, res) => {
+  const { days = 7 } = req.body;
+  const user = await query('SELECT intervals_api_key, intervals_athlete_id FROM users WHERE id = $1', [req.userId]);
+  const u = user.rows[0];
+  if (!u.intervals_api_key || !u.intervals_athlete_id) {
+    return res.status(400).json({ error: 'Configure sua API Key e Athlete ID nas Configurações' });
+  }
+
+  try {
+    const client = new IntervalsClient({ apiKey: u.intervals_api_key, athleteId: u.intervals_athlete_id });
+    const activities = await client.activities.listActivities();
+    const runs = activities.filter(a => ['Run', 'TrailRun', 'VirtualRun'].includes(a.type));
+
+    // Pega só os últimos N dias
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const recent = runs.filter(a => new Date(a.start_date) >= cutoff);
+
+    let imported = 0;
+    for (const a of recent) {
+      const pace = a.distance > 0 ? a.moving_time / (a.distance / 1000) : 0;
+      try {
+        await query(
+          `INSERT INTO activity_log (user_id, intervals_activity_id, name, type, distance, moving_time, avg_pace, avg_hr, start_date, description)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (intervals_activity_id) DO NOTHING`,
+          [req.userId, a.id, a.name, a.type, a.distance, a.moving_time, pace, a.avg_heart_rate, a.start_date, a.description || '']
+        );
+        imported++;
+      } catch (e) {
+        // pula duplicatas
+      }
+    }
+
+    // Atualiza análise de atividade para o dashboard
+    const totalDist = recent.reduce((s, a) => s + (a.distance || 0), 0);
+    const totalTime = recent.reduce((s, a) => s + (a.moving_time || 0), 0);
+    const avgPace = totalDist > 0 ? totalTime / (totalDist / 1000) : 0;
+
+    res.json({ message: `${imported} atividades importadas`, total: imported, avgPace, totalDist, totalTime });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao sincronizar atividades', details: e.message });
+  }
+});
+
+// Listar atividades importadas
+router.get('/activity-log', auth, async (req, res) => {
+  const result = await query(
+    'SELECT * FROM activity_log WHERE user_id = $1 ORDER BY start_date DESC LIMIT 50',
+    [req.userId]
+  );
+  res.json({ activities: result.rows });
+});
+
+// ===================== DASHBOARD =====================
+
+router.get('/dashboard', auth, async (req, res) => {
+  // Última atividade
+  const lastAct = await query(
+    'SELECT * FROM activity_log WHERE user_id = $1 ORDER BY start_date DESC LIMIT 1',
+    [req.userId]
+  );
+
+  // Último plano ativo (compara treinos planejados vs realizados)
+  const lastPlan = await query(
+    'SELECT * FROM training_plans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [req.userId]
+  );
+
+  // Meta ativa (goal_plan)
+  const goalPlan = await query(
+    'SELECT * FROM goal_plans WHERE user_id = $1 AND active = true ORDER BY created_at DESC LIMIT 1',
+    [req.userId]
+  );
+
+  // Últimos 30 dias de atividades para análise de confiança
+  const recentAct = await query(
+    `SELECT * FROM activity_log WHERE user_id = $1 AND start_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY start_date`,
+    [req.userId]
+  );
+
+  // Calcula confiança (0-100)
+  let confidence = 50;
+  let nextWorkout = null;
+  let plannedVsActual = null;
+
+  if (lastPlan.rows[0]) {
+    const planData = typeof lastPlan.rows[0].plan_data === 'string'
+      ? JSON.parse(lastPlan.rows[0].plan_data)
+      : lastPlan.rows[0].plan_data;
+
+    if (planData.plan) {
+      // Próximo treino agendado (primeiro com data >= hoje)
+      const today = new Date().toISOString().split('T')[0];
+      const upcoming = planData.plan.find(w => w.date >= today);
+      if (upcoming) nextWorkout = upcoming;
+
+      // Compara último treino planejado com atividade real
+      const plannedYesterday = planData.plan.filter(w => w.date < today).pop();
+      if (plannedYesterday && lastAct.rows[0]) {
+        plannedVsActual = {
+          planned: { name: plannedYesterday.name, time: plannedYesterday.moving_time },
+          actual: { name: lastAct.rows[0].name, distance: lastAct.rows[0].distance, time: lastAct.rows[0].moving_time, pace: lastAct.rows[0].avg_pace },
+          completed: !!lastAct.rows[0],
+        };
+      }
+    }
+  }
+
+  // Confiança baseada em consistência dos últimos 30 dias
+  if (recentAct.rows.length > 0) {
+    const totalRuns = recentAct.rows.length;
+    const totalDist = recentAct.rows.reduce((s, a) => s + (a.distance || 0), 0);
+    const weeksCovered = Math.max(1, Math.ceil(totalRuns / 4));
+    const weeklyAvg = totalDist / weeksCovered;
+
+    // Score: 0-100, baseado em frequência e volume
+    const freqScore = Math.min(40, (totalRuns / 12) * 40); // ideal: 12+ runs/mês
+    const volScore = Math.min(40, (weeklyAvg / 25) * 40);  // ideal: 25km+/semana
+    const consistencyScore = Math.min(20, (weeksCovered / 4) * 20);
+    confidence = Math.round(freqScore + volScore + consistencyScore);
+  }
+
+  // Última atividade com resumo
+  let lastActivitySummary = null;
+  if (lastAct.rows[0]) {
+    const a = lastAct.rows[0];
+    const distKm = a.distance ? (a.distance / 1000).toFixed(1) : '0';
+    const paceStr = a.avg_pace > 0 ? formatPace(a.avg_pace) : '—';
+    lastActivitySummary = {
+      name: a.name,
+      type: a.type,
+      distance: a.distance,
+      time: a.moving_time,
+      pace: a.avg_pace,
+      hr: a.avg_hr,
+      date: a.start_date,
+      summary: `Corrida de ${distKm}km em ritmo ${paceStr}${a.avg_hr ? ', FC média ' + a.avg_hr : ''}`
+    };
+  }
+
+  res.json({
+    lastActivity: lastAct.rows[0] ? {
+      id: lastAct.rows[0].id,
+      name: lastAct.rows[0].name,
+      distance: lastAct.rows[0].distance,
+      time: lastAct.rows[0].moving_time,
+      pace: lastAct.rows[0].avg_pace,
+      date: lastAct.rows[0].start_date,
+    } : null,
+    lastActivitySummary,
+    nextWorkout,
+    plannedVsActual,
+    confidence,
+    recentActivityCount: recentAct.rows.length,
+    goalPlan: goalPlan.rows[0] || null,
+  });
+});
+
+// Helper inline (também no analysis.js, duplicado aqui para evitar dependência circular)
+function formatPace(pace) {
+  if (!pace || pace <= 0) return '0:00';
+  const min = Math.floor(pace / 60);
+  const sec = Math.floor(pace % 60);
+  return `${min}:${sec.toString().padStart(2, '0')}/km`;
+}
+
+// ===================== GOAL-BASED PLANS =====================
+
+// Criar plano com meta
+router.post('/goal-plans', auth, async (req, res) => {
+  const { planName, distanceKm, targetTimeSeconds, targetDate, targetPace } = req.body;
+
+  if (!distanceKm || !targetDate) {
+    return res.status(400).json({ error: 'Distância e data alvo são obrigatórios' });
+  }
+
+  const distOptions = [5, 10, 21.1, 42.2];
+  const closest = distOptions.reduce((prev, curr) => Math.abs(curr - distanceKm) < Math.abs(prev - distanceKm) ? curr : prev);
+  const actualDist = closest;
+
+  const d1 = new Date();
+  const d2 = new Date(targetDate);
+  const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+  const weeks = Math.max(12, Math.min(52, Math.round(diffDays / 7)));
+
+  const targetPaceValue = targetPace || (targetTimeSeconds / actualDist);
+  const actualTimeSeconds = targetTimeSeconds || (targetPaceValue * actualDist);
+
+  const userResult = await query('SELECT name FROM users WHERE id = $1', [req.userId]);
+  const userProfile = userResult.rows[0];
+
+  const { plan, summary } = generateGoalPlan({
+    distanceKm: actualDist,
+    targetTimeSeconds: actualTimeSeconds,
+    targetDate,
+    weeks,
+    planName: planName || `Plano ${actualDist}km`,
+  });
+
+  const result = await query(
+    `INSERT INTO goal_plans (user_id, plan_name, distance_km, target_time_seconds, target_pace, target_date, weeks, plan_data)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [req.userId, planName || `Plano ${actualDist}km`, actualDist, actualTimeSeconds, targetPaceValue, targetDate, weeks, JSON.stringify({ plan, summary })]
+  );
+
+  // Salva também como training_plan para compatibilidade com sync
+  await query(
+    `INSERT INTO training_plans (user_id, plan_name, weeks, plan_data, goal_plan_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [req.userId, planName || `Plano ${actualDist}km`, weeks, JSON.stringify({ plan, zones: summary, best5kPace: null, target5kPace: targetPaceValue }), result.rows[0].id]
+  );
+
+  res.json({
+    message: 'Plano com meta criado!',
+    goalPlanId: result.rows[0].id,
+    plan,
+    summary
+  });
+});
+
+// Listar goal plans
+router.get('/goal-plans', auth, async (req, res) => {
+  const result = await query(
+    'SELECT * FROM goal_plans WHERE user_id = $1 ORDER BY created_at DESC',
+    [req.userId]
+  );
+  const plans = result.rows.map(p => ({
+    ...p,
+    plan_data: typeof p.plan_data === 'string' ? JSON.parse(p.plan_data) : p.plan_data
+  }));
+  res.json({ plans });
 });
 
 module.exports = router;

@@ -66,6 +66,8 @@
     .stat-detailed div { padding: 8px; background: #0f172a; border-radius: 4px; text-align: center; }
     .stat-detailed .val { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
     .stat-detailed .lbl { font-size: 0.7rem; color: #94a3b8; }
+    .speedometer { background: #0f172a; border-radius: 8px; padding: 16px; text-align: center; }
+    .meta-card { border-left: 3px solid #fbbf24; }
   </style>
 </head>
 <body>
@@ -101,9 +103,10 @@
       </header>
 
       <div class="tabs">
-        <div class="tab active" onclick="showSection('dashboard')">Dashboard</div>
+        <div class="tab active" onclick="showSection('dashboard')">📊 Dashboard</div>
         <div class="tab" onclick="showSection('upload')">📁 Upload</div>
         <div class="tab" onclick="showSection('zeroplane')">🌱 Iniciante</div>
+        <div class="tab" onclick="showSection('meta')">🎯 Plano por Meta</div>
         <div class="tab" onclick="showSection('plans')">Planos</div>
         <div class="tab" onclick="showSection('faq')">❓ FAQ</div>
         <div class="tab" onclick="showSection('settings')">⚙️</div>
@@ -111,12 +114,13 @@
 
       <!-- Dashboard -->
       <div id="dashboard">
-        <div class="card"><h2>📊 Resumo</h2>
-          <div class="grid">
-            <div class="stat"><div class="value" id="stat-runs">-</div><div class="label">Corridas</div></div>
-            <div class="stat"><div class="value" id="stat-dist">-</div><div class="label">Distância (km)</div></div>
-            <div class="stat"><div class="value" id="stat-pace">-</div><div class="label">Pace Médio</div></div>
-            <div class="stat"><div class="value" id="stat-5k">-</div><div class="label">Melhor 5K</div></div>
+        <div class="card"><h2>📊 Painel</h2>
+          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="syncActivities()">🔄 Sincronizar do Intervals.icu</button>
+            <button class="btn btn-outline" onclick="loadDashboard()">🔄 Atualizar Painel</button>
+          </div>
+          <div id="dashboard-content">
+            <p style="color:#94a3b8">Clique em "Sincronizar" para buscar suas atividades recentes do Intervals.icu.</p>
           </div>
         </div>
       </div>
@@ -151,6 +155,26 @@
           </div>
           <button class="btn btn-primary" onclick="generateZeroPlan()">✨ Gerar Plano Iniciante</button>
           <div id="zp-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- Plano por Meta -->
+      <div id="meta" class="hidden">
+        <div class="card"><h2>🎯 Plano de Treino por Meta</h2>
+          <p style="color:#94a3b8; margin-bottom:12px">Crie um plano personalizado para sua próxima prova! Escolha a distância, o tempo esperado e a data alvo.</p>
+          <div class="grid">
+            <div class="form-group"><label>Nome do Plano</label><input type="text" id="goal-name" value="Plano para Prova"></div>
+            <div class="form-group"><label>Distância da Prova</label><select id="goal-dist">
+              <option value="5">5km</option>
+              <option value="10">10km</option>
+              <option value="21.1">21km (Meia Maratona)</option>
+              <option value="42.2">42km (Maratona)</option>
+            </select></div>
+            <div class="form-group"><label>Tempo Alvo (minutos)</label><input type="number" id="goal-time" placeholder="ex: 25 para 5km em 25min"></div>
+            <div class="form-group"><label>Data da Prova</label><input type="date" id="goal-date"></div>
+          </div>
+          <button class="btn btn-success" onclick="generateGoalPlan()">🎯 Gerar Plano para Meta</button>
+          <div id="goal-result" style="margin-top:12px"></div>
         </div>
       </div>
 
@@ -276,7 +300,8 @@
     function showSection(sec) {
       document.querySelectorAll('#app .tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
-      ['dashboard','upload','zeroplane','plans','faq','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
+      ['dashboard','upload','zeroplane','meta','plans','faq','settings'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== sec));
+      if (sec === 'dashboard') loadDashboard();
     }
 
     async function login() {
@@ -304,6 +329,11 @@
         document.getElementById('set-api-key').value = user.intervals_api_key || '';
         document.getElementById('set-athlete-id').value = user.intervals_athlete_id || '';
         loadPlans();
+        loadDashboard();
+        // Seta data padrão para plano por meta (+3 meses)
+        const d = new Date();
+        d.setMonth(d.getMonth() + 3);
+        document.getElementById('goal-date').value = d.toISOString().split('T')[0];
       } catch { logout(); }
     }
 
@@ -414,6 +444,178 @@
         await api('/auth/settings', 'PUT', { intervals_api_key: document.getElementById('set-api-key').value, intervals_athlete_id: document.getElementById('set-athlete-id').value });
         toast('Configurações salvas!');
       } catch (e) { toast(e.message, true); }
+    }
+
+    // ===================== DASHBOARD =====================
+
+    async function loadDashboard() {
+      const container = document.getElementById('dashboard-content');
+      container.innerHTML = '<div style="color:#38bdf8">Carregando painel...</div>';
+      try {
+        const res = await api('/data/dashboard');
+        let html = '';
+
+        // Última atividade
+        html += '<div style="margin-bottom:20px">';
+        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Última Atividade Importada</h3>';
+        if (res.lastActivity) {
+          const pace = res.lastActivity.pace ? formatPaceClient(res.lastActivity.pace) : '—';
+          const dist = res.lastActivity.distance ? (res.lastActivity.distance / 1000).toFixed(2) : '0';
+          const time = res.lastActivity.time ? Math.round(res.lastActivity.time / 60) + 'min' : '—';
+          html += `<div class="stat-detailed">
+            <div><div class="val">${dist} km</div><div class="lbl">Distância</div></div>
+            <div><div class="val">${pace}</div><div class="lbl">Ritmo</div></div>
+            <div><div class="val">${time}</div><div class="lbl">Duração</div></div>
+            <div><div class="val">${new Date(res.lastActivity.date).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>
+          </div>`;
+          if (res.lastActivitySummary) {
+            html += `<div class="summary-box">📝 ${res.lastActivitySummary.summary}</div>`;
+          }
+        } else {
+          html += '<p style="color:#94a3b8">Nenhuma atividade importada. Sincronize do Intervals.icu primeiro.</p>';
+        }
+        html += '</div>';
+
+        // Planejado vs Realizado
+        html += '<div style="margin-bottom:20px">';
+        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Planejado vs Realizado</h3>';
+        if (res.plannedVsActual && res.plannedVsActual.completed) {
+          html += `<div class="stat-detailed">
+            <div><div class="val" style="color:#fbbf24">${res.plannedVsActual.planned.name}</div><div class="lbl">Planejado</div></div>
+            <div><div class="val" style="color:#22c55e">${(res.plannedVsActual.actual.distance / 1000).toFixed(2)} km</div><div class="lbl">Realizado</div></div>
+          </div>`;
+        } else {
+          html += '<p style="color:#94a3b8">Sem comparativo disponível (nenhum treino realizado vs planejado).</p>';
+        }
+        html += '</div>';
+
+        // Próximo treino
+        html += '<div style="margin-bottom:20px">';
+        html += '<h3 style="color:#38bdf8; margin-bottom:10px">Próximo Treino</h3>';
+        if (res.nextWorkout) {
+          html += `<div class="plan-item">
+            <div class="name">${res.nextWorkout.name}</div>
+            <div class="desc">📅 ${new Date(res.nextWorkout.date).toLocaleDateString('pt-BR')} — ${res.nextWorkout.description}</div>
+          </div>`;
+        } else {
+          html += '<p style="color:#94a3b8">Nenhum plano ativo. Crie um plano em "Upload", "Iniciante" ou "Plano por Meta".</p>';
+        }
+        html += '</div>';
+
+        // Velocímetro de Confiança
+        html += '<div style="margin-bottom:10px">';
+        html += '<h3 style="color:#38bdf8; margin-bottom:10px">📈 Nível de Confiança</h3>';
+        const conf = res.confidence || 0;
+        const confColor = conf < 40 ? '#ef4444' : conf < 70 ? '#fbbf24' : '#22c55e';
+        html += `<div style="background:#0f172a; border-radius:8px; padding:16px; text-align:center">
+          <div style="position:relative; display:inline-block; width:160px; height:160px; margin:0 auto">
+            <svg viewBox="0 0 100 100" style="transform:rotate(-90deg); width:160px; height:160px">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="${confColor}" stroke-width="8"
+                stroke-dasharray="264" stroke-dashoffset="${264 - (264 * conf / 100)}" stroke-linecap="round"
+                style="transition: stroke-dashoffset 0.8s"/>
+            </svg>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)">
+              <div style="font-size:2.5rem; font-weight:700; color:${confColor}">${conf}</div>
+              <div style="font-size:0.8rem; color:#94a3b8">/ 100</div>
+            </div>
+          </div>
+          <p style="color:#94a3b8; margin-top:8px; font-size:0.85rem">
+            ${conf < 40 ? '🔴 Baixo — você precisa treinar com mais consistência' : conf < 70 ? '🟡 Médio — está no caminho, continue evoluindo' : '🟢 Alto — ótima consistência! Vai conseguir bater sua meta!'}
+          </p>
+          <p style="color:#64748b; font-size:0.75rem; margin-top:4px">Baseado em ${res.recentActivityCount} atividades nos últimos 30 dias</p>
+        </div>`;
+        html += '</div>';
+
+        // Meta ativa
+        if (res.goalPlan) {
+          html += '<div style="margin-bottom:10px">';
+          html += `<h3 style="color:#38bdf8; margin-bottom:10px">🎯 Meta Ativa: ${res.goalPlan.plan_name}</h3>`;
+          const gp = res.goalPlan;
+          const targetDate = new Date(gp.target_date).toLocaleDateString('pt-BR');
+          html += `<div class="stat-detailed">
+            <div><div class="val">${gp.distance_km}km</div><div class="lbl">Distância</div></div>
+            <div><div class="val">${formatPaceClient(gp.target_pace)}</div><div class="lbl">Ritmo Alvo</div></div>
+            <div><div class="val">${targetDate}</div><div class="lbl">Data da Prova</div></div>
+            <div><div class="val">${gp.weeks} sem</div><div class="lbl">Duração</div></div>
+          </div>`;
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = '<p style="color:#ef4444">Erro ao carregar painel: ' + e.message + '</p>';
+      }
+    }
+
+    async function syncActivities() {
+      try {
+        const res = await api('/data/sync-activities', 'POST', { days: 30 });
+        toast(`${res.total} atividades importadas do Intervals.icu!`);
+        loadDashboard();
+      } catch (e) { toast(e.message, true); }
+    }
+
+    function formatPaceClient(pace) {
+      if (!pace || pace <= 0) return '0:00';
+      const min = Math.floor(pace / 60);
+      const sec = Math.floor(pace % 60);
+      return `${min}:${sec.toString().padStart(2, '0')}/km`;
+    }
+
+    // ===================== GOAL PLAN =====================
+
+    async function generateGoalPlan() {
+      document.getElementById('goal-result').innerHTML = '<div style="color:#38bdf8">Gerando plano personalizado para sua meta...</div>';
+      try {
+        const dist = parseFloat(document.getElementById('goal-dist').value);
+        const timeMin = parseFloat(document.getElementById('goal-time').value);
+        const targetTimeSeconds = timeMin * 60;
+        const targetDate = document.getElementById('goal-date').value;
+        const planName = document.getElementById('goal-name').value || `Plano ${dist}km`;
+
+        if (!targetDate) return toast('Defina a data da prova!', true);
+        if (!timeMin || timeMin <= 0) return toast('Defina o tempo alvo!', true);
+
+        const res = await api('/data/goal-plans', 'POST', {
+          planName,
+          distanceKm: dist,
+          targetTimeSeconds,
+          targetDate,
+        });
+
+        // Preview
+        let html = `<div class="summary-box">✅ ${res.message}</div>`;
+        html += '<div class="stat-detailed" style="margin-top:8px">';
+        html += `<div><div class="val">${dist}km</div><div class="lbl">Distância</div></div>`;
+        html += `<div><div class="val">${formatTimeClient(targetTimeSeconds)}</div><div class="lbl">Tempo Alvo</div></div>`;
+        html += `<div><div class="val">${new Date(targetDate).toLocaleDateString('pt-BR')}</div><div class="lbl">Data</div></div>`;
+        html += `<div><div class="val">${res.plan.length} sessões</div><div class="lbl">Total de Treinos</div></div>`;
+        html += '</div>';
+
+        // Primeiras 2 semanas
+        if (res.plan) {
+          html += '<div style="max-height:300px; overflow-y:auto; margin-top:12px">';
+          res.plan.slice(0, 14).forEach(p => {
+            html += `<div class="plan-item"><div class="name">${p.name} ${p.moving_time > 0 ? '| '+Math.round(p.moving_time/60)+'min' : ''}<span class="ai-badge">📅 ${p.date}</span></div><div class="desc">${p.description}</div></div>`;
+          });
+          if (res.plan.length > 14) html += `<p style="color:#64748b; text-align:center; margin-top:8px">...e mais ${res.plan.length - 14} treinos</p>`;
+          html += '</div>';
+        }
+
+        document.getElementById('goal-result').innerHTML = html;
+        loadPlans();
+        toast('Plano por meta criado!');
+      } catch (e) { toast(e.message, true); }
+    }
+
+    function formatTimeClient(sec) {
+      if (!sec || sec <= 0) return '0:00';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h > 0) return `${h}h${String(m).padStart(2,'0')}m${String(s).padStart(2,'0')}s`;
+      return `${m}:${String(s).padStart(2,'0')}`;
     }
 
     // Chat

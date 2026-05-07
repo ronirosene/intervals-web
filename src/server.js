@@ -60,6 +60,42 @@ async function initDb() {
     `);
     // Adiciona coluna plan_name se não existir (para tabelas já criadas)
     await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'Meu Plano'`).catch(() => {});
+    await query(`ALTER TABLE training_plans ADD COLUMN IF NOT EXISTS goal_plan_id INTEGER`).catch(() => {});
+
+    // Tabela para log de atividades sincronizadas em tempo real
+    await query(`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        intervals_activity_id TEXT UNIQUE,
+        name TEXT,
+        type TEXT,
+        distance REAL,
+        moving_time INTEGER,
+        avg_pace REAL,
+        avg_hr REAL,
+        start_date TIMESTAMP,
+        description TEXT,
+        planned_workout_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    // Tabela para planos com meta (5k/10k/21k/42k)
+    await query(`
+      CREATE TABLE IF NOT EXISTS goal_plans (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        plan_name TEXT,
+        distance_km REAL,
+        target_time_seconds INTEGER,
+        target_pace REAL,
+        target_date DATE,
+        weeks INTEGER,
+        plan_data TEXT,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
     console.log('✅ Banco de dados inicializado');
   } catch (e) {
     console.error('❌ Erro ao inicializar DB:', e.message);
