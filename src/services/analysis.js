@@ -168,7 +168,7 @@ function buildDetailedDescription(name, typeTag, zones, durationSec) {
   const threshold = zones.threshold || { min: 300, max: 330 };
   const speed = zones.speed || { min: 240, max: 270 };
 
-  const fp = (s) => formatPace(s * 60);
+  const fp = (s) => formatPace(s);
   const min = (s) => Math.round(s / 60);
 
   switch (typeTag) {
