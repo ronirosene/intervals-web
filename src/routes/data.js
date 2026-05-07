@@ -174,8 +174,10 @@ router.delete('/plan/:id', auth, async (req, res) => {
             newest: futureDate.toISOString().split('T')[0],
             category: ['WORKOUT']
           });
+          const today = new Date().toISOString().split('T')[0];
           for (const e of events) {
-            if (e.id) {
+            // Só apaga treinos futuros (hoje em diante), preserva o que já passou
+            if (e.id && e.start_date && e.start_date.split('T')[0] >= today) {
               try { await client.events.deleteEvent(e.id); } catch {}
             }
           }
